@@ -559,3 +559,10 @@ html.eink .title .hz { color: #000; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* De installatie blijft bereikbaar, maar onderbreekt geen les. */
+.install-bar { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: .5rem 1rem; padding: .6rem max(1rem, env(safe-area-inset-right)) .6rem max(1rem, env(safe-area-inset-left)); background: var(--night); color: white; font-size: .9rem; }
+.install-bar[hidden], body[data-screen="lesson"] .install-bar, body[data-screen="results"] .install-bar { display: none; }
+.install-bar .btn { background: var(--gold); color: var(--ink); padding: .45rem .8rem; min-height: 44px; }
+.install-help h3 { margin-top: 1rem; }
+.install-link { display: inline-block; margin: .8rem 0; color: var(--ink); text-decoration: underline; }
