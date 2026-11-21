@@ -16,6 +16,7 @@
       hongbao: Screens.hongbao, story: Screens.story, parent: Parent.show
     }[name];
     if (fn) fn(opts);
+    reloadIfReady();
   };
   App.screen = function () { return current; };
 
@@ -166,6 +167,42 @@
     Snd.setEnabled(d.sound !== false);
   };
 
+  /* Een nieuwe worker neemt over zodra de versie voor offline gebruik klaarstaat. */
+  var updateReady = false;
+  var reloading = false;
+
+  function reloadIfReady() {
+    if (!updateReady || reloading || document.visibilityState === 'hidden') return;
+    if (current !== 'home' && current !== 'chooser' && current !== 'newplayer') return;
+    reloading = true;
+    Store.save();
+    location.reload();
+  }
+
+  function startUpdates() {
+    if (!('serviceWorker' in navigator) || !window.isSecureContext) return;
+    var serviceWorker = navigator.serviceWorker;
+    var previous = serviceWorker.controller;
+    serviceWorker.addEventListener('controllerchange', function () {
+      var next = serviceWorker.controller;
+      if (previous && next && previous !== next) updateReady = true;
+      previous = next;
+      reloadIfReady();
+    });
+    var registration = serviceWorker.register('sw.js', { updateViaCache: 'none' });
+    function check() {
+      reloadIfReady();
+      if (navigator.onLine === false || updateReady) return;
+      registration.then(function (reg) { return reg.update(); }).catch(function () {});
+    }
+    check();
+    window.addEventListener('online', check);
+    window.addEventListener('pageshow', function (event) { if (event.persisted) check(); });
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') check();
+    });
+  }
+
   /* ---- opstarten ---- */
   App.boot = function () {
     Family.load();
@@ -199,9 +236,7 @@
         if (changed && (current === 'chooser' || current === 'home' || (current === 'newplayer' && Store.players().length))) App.go(current === 'newplayer' ? 'chooser' : current);
       });
     });
-    if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) {
-      navigator.serviceWorker.register('sw.js').catch(function () { /* niets */ });
-    }
+    startUpdates();
   };
 
   window.App = App;

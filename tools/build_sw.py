@@ -11,11 +11,12 @@ for d in ["css", "js", "fonts", "icons", "audio"]:
             continue
         files.append(d + "/" + f)
 
-h = hashlib.sha1()
+h = hashlib.sha256(open(__file__, "rb").read())
 for f in files[1:]:
     p = os.path.join(ROOT, f)
     if os.path.isfile(p):
-        h.update(open(p, "rb").read())
+        h.update(f.encode("utf-8") + b"\0")
+        h.update(hashlib.sha256(open(p, "rb").read()).digest())
 version = h.hexdigest()[:10]
 
 core = [f for f in files if not f.startswith("audio/")]
@@ -26,11 +27,17 @@ var VERSION = 'xiaolong-%s';
 var CORE = %s;
 var AUDIO = %s;
 
+function precacheRequest(path) {
+  var url = new URL(path, self.registration.scope);
+  url.searchParams.set('xl-version', VERSION);
+  return new Request(url, { cache: 'reload' });
+}
+
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(VERSION).then(function (c) {
-    return c.addAll(CORE).then(function () {
+    return c.addAll(CORE.map(precacheRequest)).then(function () {
       // geluid in stukjes, zodat één fout niet alles tegenhoudt
-      return Promise.all(AUDIO.map(function (u) { return c.add(u).catch(function () {}); }));
+      return Promise.all(AUDIO.map(function (u) { return c.add(precacheRequest(u)).catch(function () {}); }));
     });
   }).then(function () { return self.skipWaiting(); }));
 });
@@ -44,14 +51,14 @@ self.addEventListener('activate', function (e) {
 self.addEventListener('fetch', function (e) {
   var url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
-  e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(function (hit) {
-    return hit || fetch(e.request).then(function (res) {
-      if (res.ok && res.type === 'basic') {
-        var copy = res.clone();
-        caches.open(VERSION).then(function (c) { c.put(e.request, copy); });
-      }
-      return res;
-    }).catch(function () { return caches.match('index.html'); });
+  e.respondWith(caches.open(VERSION).then(function (cache) {
+    return cache.match(e.request, { ignoreSearch: true }).then(function (hit) {
+      if (hit) return hit;
+      return fetch(e.request).catch(function (error) {
+        if (e.request.mode !== 'navigate') throw error;
+        return cache.match('index.html', { ignoreSearch: true });
+      });
+    });
   }));
 });
 """ % (version, repr(core).replace("'", '"'), repr(audio).replace("'", '"'))
