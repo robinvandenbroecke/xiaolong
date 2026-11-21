@@ -13,7 +13,7 @@
     document.body.dataset.screen = name;
     var fn = {
       chooser: Screens.chooser, newplayer: Screens.newplayer, home: Screens.home, album: Screens.album,
-      hongbao: Screens.hongbao, story: Screens.story, parent: Parent.show
+      mine: Mine.show, hongbao: Screens.hongbao, story: Screens.story, parent: Parent.show
     }[name];
     if (fn) fn(opts);
     reloadIfReady();

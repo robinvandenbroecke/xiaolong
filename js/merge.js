@@ -99,6 +99,7 @@
       hb: union(a.hb, b.hb),
       fam: union(a.fam, b.fam),
       seen: union(a.seen, b.seen),
+      mine: maxTree(a.mine, b.mine),
       hatch: hatchA && hatchB ? Math.min(hatchA, hatchB) : (hatchA || hatchB)
     };
   }

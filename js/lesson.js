@@ -430,6 +430,7 @@
           var add = info.stars || 1;
           if (ctx.combo > 0 && ctx.combo % 5 === 0) { add += 2; Snd.fx('combo'); } else Snd.fx('good');
           ctx.stars += add; Store.addStars(player, add);
+          if (!info.almost) { Mine.earn(player); ctx.coins = (ctx.coins || 0) + 1; }
           starEl.textContent = ctx.stars;
           starEl.classList.remove('bump'); void starEl.offsetWidth; starEl.classList.add('bump');
         } else {
@@ -466,6 +467,7 @@
         h('span.sh-dragon', { html: Dragon.svg({ color: col, stage: Math.max(1, Store.stage(player)), mood: ok ? 'happy' : 'oops', crop: 'head' }) }),
         h('div.sh-words', h('strong', ok && info.almost ? 'Goed geprobeerd!' : ok ? U.pick(['Goed zo!', 'Super!', 'Knap!', 'Juist!', 'Straf!', 'Amai!']) : 'Oei, net niet.'),
           h('span.sh-zh', { lang: 'zh-CN' }, pr.hz, ' ', h('em', pr.py))));
+      if (ok && !info.almost) head.appendChild(h('span.mine-coin', '+1 🪙'));
       sheet.appendChild(head);
       if (it) {
         var reveal = h('div.sh-item', hzBlock(it, true, 'sm'), h('span.sh-nl', (it.em && it.k !== 'z' ? it.em + ' ' : '') + it.nl),
@@ -501,7 +503,7 @@
         title: node.lesson ? node.lesson.title : (node.kind === 'oefen' ? 'Oefenen' : 'Toonspel'),
         ok: ctx.ok, total: ctx.total, stars: ctx.stars, secs: Math.round(secs), aborted: aborted });
       Store.save();
-      onDone({ aborted: aborted, stars: ctx.stars, ok: ctx.ok, total: ctx.total, lanterns: lanterns,
+      onDone({ aborted: aborted, coins: ctx.coins || 0, stars: ctx.stars, ok: ctx.ok, total: ctx.total, lanterns: lanterns,
         newItems: ctx.newItems, secs: secs, bestCombo: ctx.bestCombo, nodeId: nodeId });
     }
 

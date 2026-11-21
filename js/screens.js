@@ -205,6 +205,8 @@
     album.addEventListener('click', function () { App.go('album'); });
     acts.appendChild(practice); acts.appendChild(tones); acts.appendChild(album);
     side.appendChild(acts);
+    side.appendChild(h('button.mine-entry', { type: 'button', onclick: function () { App.go('mine'); } },
+      h('strong', '⛏ Blokkenmijn'), h('span', Mine.label(p))));
 
     // samen-doel
     if (Store.players().length > 1) {
@@ -310,6 +312,7 @@
       h('div', h('strong', '+' + res.stars), h('span', 'sterren')),
       h('div', h('strong', acc + '%'), h('span', 'juist')),
       h('div', h('strong', Math.max(1, Math.round(res.secs / 60))), h('span', 'minuten'))));
+    if (res.coins) wrap.appendChild(h('p.mine-reward', '+' + res.coins + ' 🪙 · ' + Mine.label(p)));
     if (res.newItems && res.newItems.length) {
       var nw = h('div.res-new');
       nw.appendChild(h('p', 'Nieuw geleerd'));
@@ -324,14 +327,21 @@
       wrap.appendChild(nw);
     }
     var go = h('button.btn.primary.big', { type: 'button' }, 'Verder');
+    var destination = 'home';
     go.addEventListener('click', function () { nextEvent(); });
     wrap.appendChild(go);
+    if (Mine.balance(p) >= 6) {
+      wrap.appendChild(h('button.btn.ghost', { type: 'button', onclick: function () {
+        destination = 'mine';
+        nextEvent();
+      } }, '⛏ Pakje openen in de Blokkenmijn'));
+    }
     root.appendChild(wrap);
     Snd.fx('done');
     var queue = (events || []).slice();
     function nextEvent() {
       var e = queue.shift();
-      if (!e) { App.go('home'); return; }
+      if (!e) { App.go(destination); return; }
       if (e === 'hatch') Scr.hatch(nextEvent);
       else if (e === 'grow') Scr.grow(nextEvent);
       else if (e === 'goal') Scr.goalReached(nextEvent);

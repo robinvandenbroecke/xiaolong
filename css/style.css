@@ -566,3 +566,23 @@ html.eink .title .hz { color: #000; }
 .install-bar .btn { background: var(--gold); color: var(--ink); padding: .45rem .8rem; min-height: 44px; }
 .install-help h3 { margin-top: 1rem; }
 .install-link { display: inline-block; margin: .8rem 0; color: var(--ink); text-decoration: underline; }
+
+/* Blokkenmijn */
+.mine-room { max-width: 750px; margin: auto; padding: 1rem; text-align: center; }
+.mine-room .sub-top { justify-content: flex-start; margin-bottom: 1rem; }
+.mine-room .row { justify-content: center; flex-wrap: wrap; margin: 1rem 0; }
+.mine-entry { display: flex; width: 100%; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .3rem .8rem; margin-top: .75rem; padding: .65rem .85rem; border: 2px solid #986040; border-radius: .6rem; background: #f8d091; color: #302438; text-align: left; }
+.mine-balance, .mine-reward { font-weight: bold; }
+.mine-album { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .55rem; margin: .85rem 0; }
+.mine-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem; min-width: 0; min-height: 5.5rem; padding: .45rem; border: 2px solid #58638a; border-radius: .55rem; background: #fffdf4; color: #29283e; font-size: .85rem; overflow-wrap: anywhere; }
+.mine-art { display: block; width: 100%; max-width: 8rem; height: auto; border-radius: .3rem; image-rendering: pixelated; }
+.mine-locked { border-style: dashed; background: #e3e8ee; color: #3e4664; }
+.mine-locked span:first-child { font-size: 1.8rem; }
+.mine-gold { border-color: #8f5705; background: #ffdfa0; }
+.mine-reveal { text-align: center; }
+.mine-reveal .mine-art { margin: .6rem auto; }
+.mine-bridge { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .2rem; padding: .9rem .45rem; border-inline: .8rem solid #806649; background: #9cdbee; margin: .8rem 0; }
+.mine-bridge span { height: 1.3rem; border: 2px dashed #386781; }
+.mine-bridge .laid { border: 2px solid #744527; background: #e4ad69; box-shadow: inset 0 -.25rem #b66f3a; }
+.mine-feedback { min-height: 2.8em; font-weight: bold; }
+.mine-coin { display: inline-block; margin-left: auto; white-space: nowrap; color: #382603; background: #ffdf85; border: 1px solid #91640d; padding: .1rem .38rem; border-radius: .35rem; font-weight: bold; }
