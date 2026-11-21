@@ -180,23 +180,33 @@
   }
 
   function startUpdates() {
-    if (!('serviceWorker' in navigator) || !window.isSecureContext) return;
+    if (!('serviceWorker' in navigator) || window.isSecureContext === false) return;
     var serviceWorker = navigator.serviceWorker;
     var previous = serviceWorker.controller;
-    serviceWorker.addEventListener('controllerchange', function () {
+    function checkController() {
       var next = serviceWorker.controller;
       if (previous && next && previous !== next) updateReady = true;
-      previous = next;
+      if (next) previous = next;
       reloadIfReady();
-    });
+      return next;
+    }
+    serviceWorker.addEventListener('controllerchange', check);
     var registration = serviceWorker.register('sw.js', { updateViaCache: 'none' });
+    var lastCheck = 0;
     function check() {
-      reloadIfReady();
-      if (navigator.onLine === false || updateReady) return;
-      registration.then(function (reg) { return reg.update(); }).catch(function () {});
+      var controller = checkController();
+      if (navigator.onLine === false || reloading || document.visibilityState === 'hidden') return;
+      if (controller && !updateReady) controller.postMessage('CACHE_AUDIO');
+      if (updateReady || Date.now() - lastCheck < 15000) return;
+      lastCheck = Date.now();
+      registration.then(function (reg) { return reg.update(); }).catch(function () {
+        lastCheck = 0;
+      });
     }
     check();
-    window.addEventListener('online', check);
+    window.addEventListener('online', function () { lastCheck = 0; check(); });
+    window.addEventListener('focus', check);
+    window.setInterval(check, 60000);
     window.addEventListener('pageshow', function (event) { if (event.persisted) check(); });
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') check();
