@@ -132,6 +132,8 @@
 
   /* ---------- synchroniseren ---------- */
   function sync(body) {
+    Family.show(body);
+    if (Family.active()) return;
     var c = Store.device().sync;
     if (Sync.configured()) {
       var st = c.status === 'fout' ? 'Probleem: ' + (c.msg || '') : c.last ? 'Laatst gesynchroniseerd: ' + new Date(c.last).toLocaleString('nl-BE') : 'Nog niet gesynchroniseerd.';

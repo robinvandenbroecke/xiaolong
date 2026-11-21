@@ -10,9 +10,10 @@
   var busy = null;
 
   Sync.config = function () { return Store.device().sync; };
-  Sync.configured = function () { var c = Sync.config(); return !!(c && c.url && c.key); };
+  Sync.configured = function () { if (Family.active()) return true; var c = Sync.config(); return !!(c && c.url && c.key); };
 
   Sync.icon = function () {
+    if (Family.active()) return '☁︎';
     var c = Sync.config();
     if (!c || !c.url) return '☁︎';
     if (c.status === 'bezig') return '⟳';
@@ -67,6 +68,7 @@
 
   /* Voert een synchronisatie uit. Geeft true terug als er iets veranderd is. */
   Sync.now = function (manual) {
+    if (Family.active()) return Family.sync(manual);
     if (!Sync.configured()) {
       if (manual) App.toast('Nog niet gekoppeld. Dat kan in de ouderhoek.');
       return Promise.resolve(false);
@@ -85,6 +87,7 @@
     setStatus('bezig');
     busy = post(c.url, { a: 'push', k: c.key, dev: st.device.id, devName: st.device.name || '', players: mine, log: sent, dict: dictionary() })
       .then(function (r) {
+        if (st !== Store.state()) return false;
         if (!r.ok) throw new Error(r.error === 'sleutel' ? 'De sleutel klopt niet.' : (r.error || 'Fout bij de spreadsheet.'));
         var all = XLMerge.mergePlayers(Object.keys(st.players).map(function (k) { return st.players[k]; }), r.players || []);
         all.forEach(function (p) { st.players[p.id] = p; });
@@ -97,6 +100,7 @@
         return JSON.stringify(st.players) !== before;
       })
       .catch(function (e) {
+        if (st !== Store.state()) return false;
         var msg = e && e.message ? e.message : String(e);
         if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) msg = 'De spreadsheet is niet bereikbaar. Klopt de link, en is het script als web-app gepubliceerd?';
         setStatus('fout', msg);

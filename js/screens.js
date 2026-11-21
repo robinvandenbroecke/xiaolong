@@ -101,6 +101,11 @@
     });
     row.appendChild(back); row.appendChild(ok);
     wrap.appendChild(row);
+    if (!edit && !Family.used()) {
+      wrap.appendChild(h('button.btn.ghost', { type: 'button', onclick: function () {
+        App.parentGate().then(function (ok) { if (ok) App.go('parent', { tab: 'sync' }); });
+      } }, 'Ik heb al een gezinsaccount'));
+    }
     root.appendChild(wrap);
     paint();
     setTimeout(function () { if (!edit) name.focus(); }, 100);

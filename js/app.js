@@ -168,14 +168,15 @@
 
   /* ---- opstarten ---- */
   App.boot = function () {
-    Store.load();
+    Family.load();
+    Store.load(Family.account());
     App.applyDevice();
     // koppellink uit de spreadsheet: #koppel=...
     var m = location.hash.match(/koppel=([A-Za-z0-9_\-]+)/);
     if (m) {
       try {
         var cfg = JSON.parse(U.b64d(m[1]));
-        if (cfg.u && cfg.k) {
+        if (!Family.active() && cfg.u && cfg.k) {
           Store.device().sync = { url: cfg.u, key: cfg.k, last: 0, status: 'nieuw' };
           Store.save();
           setTimeout(function () { App.toast('Gekoppeld aan de spreadsheet.'); }, 300);
@@ -190,11 +191,12 @@
     else if (Store.players().length === 1 && p) App.go('home');
     else App.go('chooser');
     Sync.now(false).then(function (changed) {
-      if (changed && (current === 'chooser' || current === 'home')) App.go(current);
+      if (changed && (current === 'chooser' || current === 'home' || (current === 'newplayer' && Store.players().length))) App.go(current === 'newplayer' ? 'chooser' : current);
     });
+    window.addEventListener('online', App.syncSoon);
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') Sync.now(false).then(function (changed) {
-        if (changed && (current === 'chooser' || current === 'home')) App.go(current);
+        if (changed && (current === 'chooser' || current === 'home' || (current === 'newplayer' && Store.players().length))) App.go(current === 'newplayer' ? 'chooser' : current);
       });
     });
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) {

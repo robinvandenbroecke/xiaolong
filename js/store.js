@@ -1,7 +1,8 @@
 /* Opslag, spelers, voortgang en herhalingsschema. */
 (function () {
   'use strict';
-  var KEY = 'xiaolong.v1';
+  var LOCAL_KEY = 'xiaolong.v1';
+  var key = LOCAL_KEY;
   var S = {};
   var state = null;
   var listeners = [];
@@ -38,8 +39,9 @@
     };
   }
 
-  S.load = function () {
-    var raw = U.storage.get(KEY);
+  S.load = function (account) {
+    key = account ? LOCAL_KEY + '/' + account : LOCAL_KEY;
+    var raw = U.storage.get(key);
     try { state = raw ? JSON.parse(raw) : null; } catch (e) { state = null; }
     if (!state || !state.device) state = blank();
     state.players = state.players || {};
@@ -49,8 +51,9 @@
     return state;
   };
   S.save = function () {
-    U.storage.set(KEY, JSON.stringify(state));
+    var saved = U.storage.set(key, JSON.stringify(state));
     listeners.forEach(function (f) { try { f(); } catch (e) { /* niets */ } });
+    return saved;
   };
   S.onChange = function (f) { listeners.push(f); };
   S.state = function () { return state; };
@@ -78,8 +81,25 @@
   };
   S.current = function () { return S.player(state.device.lastPlayer); };
   S.setCurrent = function (id) { state.device.lastPlayer = id; S.save(); };
-  S.addPlayer = function (name, color) {
-    var p = fixPlayer({ id: U.uid(10), v: 1, prof: { name: name, color: color, c: now(), t: now() } });
+  S.mergePlayers = function (incoming) {
+    var current = Object.keys(state.players).map(function (id) { return state.players[id]; });
+    var merged = XLMerge.mergePlayers(current, incoming);
+    var next = {};
+    merged.forEach(function (p) { next[p.id] = fixPlayer(p); });
+    if (XLMerge.same(state.players, next)) return false;
+    state.players = next;
+    S.save();
+    return true;
+  };
+  S.localPlayers = function () {
+    try {
+      var local = JSON.parse(U.storage.get(LOCAL_KEY));
+      return Object.keys(local.players).map(function (id) { return local.players[id]; })
+        .filter(function (p) { return !p.del; });
+    } catch (e) { return []; }
+  };
+  S.addPlayer = function (name, color, id) {
+    var p = fixPlayer({ id: id || U.uid(10), v: 1, prof: { name: name, color: color, c: now(), t: now() } });
     p.set.t = now();
     state.players[p.id] = p;
     state.device.lastPlayer = p.id;

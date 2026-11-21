@@ -117,7 +117,19 @@
     return order.map(function (id) { return byId[id]; });
   }
 
-  var api = { mergePlayer: mergePlayer, mergePlayers: mergePlayers };
+  function canonical(value) {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (!value || typeof value !== 'object') return value;
+    var ordered = Object.create(null);
+    Object.keys(value).sort().forEach(function (key) { ordered[key] = canonical(value[key]); });
+    return ordered;
+  }
+
+  function same(a, b) {
+    return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+  }
+
+  var api = { mergePlayer: mergePlayer, mergePlayers: mergePlayers, same: same };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.XLMerge = api;
 })(typeof self !== 'undefined' ? self : this);
