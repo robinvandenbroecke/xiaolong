@@ -228,15 +228,10 @@ p { margin: 0 0 .6em; }
 .path-end { text-align: center; color: rgba(255,255,255,.6); font-family: var(--f-ui); padding: 20px; }
 
 @media (min-width: 760px) {
-  .home { display: grid; grid-template-columns: minmax(295px, 34%) minmax(0, 1fr); align-items: start; }
-  .topbar { grid-column: 1 / -1; }
-  .side { padding: 18px 14px 24px; }
-  .path { align-self: stretch; border-radius: 22px 0 0; }
+  .side { padding: 18px 20px 28px; }
   .unit { max-width: 820px; margin-inline: auto; }
 }
 @media (min-width: 1024px) {
-  .home { grid-template-columns: minmax(340px, 30%) minmax(0, 1fr); }
-  .side { padding-inline: clamp(18px, 2vw, 32px); }
   .path { padding-inline: clamp(12px, 3vw, 54px); }
   .nodes { display: grid; grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); align-items: start; padding-inline: 12px; }
   .node { width: 100%; }
@@ -698,3 +693,30 @@ html.eink .seg-b.on { outline: 2px solid var(--line); outline-offset: -2px; }
 html.eink .install-bar { color: var(--ink); border-bottom: 1px solid var(--line); }
 html.eink .install-bar .btn { background: #f6e8c8; }
 html.eink .wday:not(.on) .wl, html.eink .fam-l:not(.on) { opacity: .58; }
+
+/* Compact startscherm met een korte vooruitblik op het leerpad. */
+.home .side { width: 100%; max-width: 760px; margin-inline: auto; }
+.lesson-overview { display: grid; gap: .55rem; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: clamp(.7rem, 2vw, 1rem); }
+.lesson-overview-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .35rem .65rem; }
+.lesson-overview-head h2 { margin: 0; font-size: 1.3rem; }
+.btn.lesson-path-link { min-height: 44px; padding: .4rem .8rem; font-size: .9rem; }
+.lesson-meter { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .65rem; color: var(--ink-2); font-size: .83rem; }
+.lesson-meter progress { min-width: 80px; flex: 1 1 115px; height: 14px; accent-color: var(--jade); }
+.lesson-overview .home-resume { width: 100%; }
+.lesson-unit { opacity: .93; }
+.lesson-nearby { display: grid; gap: .35rem; list-style: none; margin: 0; padding: 0; }
+.lesson-nearby li { min-width: 0; }
+.lesson-step { display: flex; width: 100%; height: 100%; min-height: 44px; align-items: baseline; gap: .2rem .45rem; flex-wrap: wrap; background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: .65rem; padding: .4rem .55rem; font-size: .88rem; text-align: left; }
+.lesson-step strong { overflow-wrap: anywhere; }
+.lesson-step-label { color: var(--ink-2); font-size: .8em; }
+.lesson-lock { margin-left: auto; font-size: .85em; }
+.lesson-step-locked { border-style: dashed; }
+.full-path { width: 100%; max-width: 1060px; margin-inline: auto; }
+.full-path .sub-top { padding-inline: .75rem; }
+.full-path .path { border-radius: 18px 18px 0 0; }
+@media (min-width: 560px) {
+  .lesson-nearby { grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); }
+  .lesson-step { align-content: center; }
+}
+html.eink .lesson-overview, html.eink .lesson-step { border-width: 2px; }
+html.eink .lesson-step-locked { background: #faf7ed; }

@@ -142,10 +142,9 @@
     gear.addEventListener('click', function () { App.parentGate().then(function (ok) { if (ok) App.go('parent'); }); });
     home.appendChild(h('header.topbar', who, h('div.top-stats', stars, streak, sync, gear)));
 
-    // linkerkolom: draak, doel, week
+    // Startscherm: de volgende les staat bovenaan.
     var side = h('section.side');
-    var currentId = Store.currentNode(p);
-    var currentLesson = Store.allNodes().filter(function (entry) { return entry.lesson.id === currentId; })[0];
+    side.appendChild(lessonOverview(p));
     var stage = Store.stage(p);
     var dt = Store.dayTotals(p);
     var goal = p.set.goal || 20;
@@ -169,17 +168,6 @@
     var ns = Store.nextStage(p);
     hero.appendChild(h('p.stage-name', Store.STAGES[stage].nl + (ns && stage > 0 ? ' · nog ' + (ns.min - Store.totalStars(p)) + ' ★ tot ' + ns.nl.toLowerCase() : '')));
     side.appendChild(hero);
-    if (currentLesson) {
-      var resume = h('button.btn.primary.home-resume', { type: 'button' },
-        h('strong', stage ? 'Verder oefenen' : 'Speel je eerste les'),
-        h('span', currentLesson.lesson.title));
-      resume.addEventListener('click', function () {
-        Snd.unlock();
-        Scr.nodeSheet(p, currentLesson.unit, currentLesson.lesson);
-      });
-      side.appendChild(resume);
-    }
-
     // dagdoel en envelopje
     var pct = Math.min(100, Math.round(100 * dt.s / goal));
     var goalBox = h('div.goal');
@@ -238,9 +226,58 @@
     }
     home.appendChild(side);
 
-    // leerpad
+    root.appendChild(home);
+  };
+
+  function lessonOverview(p) {
+    var all = Store.allNodes();
+    var done = all.filter(function (entry) { return Store.nodeDone(p, entry.lesson.id); }).length;
+    var currentId = Store.currentNode(p);
+    var index = all.findIndex(function (entry) { return entry.lesson.id === currentId; });
+    var currentLesson = all[index];
+    var section = h('section.lesson-overview', { 'aria-label': 'Leerpad en voortgang' });
+    var full = h('button.btn.ghost.lesson-path-link', { type: 'button', onclick: function () { App.go('path'); } }, 'Hele leerpad');
+    section.appendChild(h('div.lesson-overview-head', h('h2', 'Leerpad'), full));
+    section.appendChild(h('div.lesson-meter',
+      h('progress', { value: done, max: all.length || 1, 'aria-label': 'Afgeronde lessen' }),
+      h('span', done + ' van ' + all.length + ' lessen klaar')));
+    if (!currentLesson) return section;
+
+    function open(entry) {
+      Snd.unlock();
+      Scr.nodeSheet(p, entry.unit, entry.lesson);
+    }
+    var complete = done === all.length;
+    section.appendChild(h('button.btn.primary.home-resume', { type: 'button', onclick: function () { open(currentLesson); } },
+      h('strong', complete ? 'Laatste les opnieuw' : done ? 'Verder oefenen' : 'Speel je eerste les'),
+      h('span', currentLesson.lesson.title),
+      h('span.lesson-unit', currentLesson.unit.nl)));
+    var nearby = h('ol.lesson-nearby');
+    all.slice(Math.max(0, index - 1), index + 3).forEach(function (entry) {
+      var position = all.indexOf(entry);
+      if (position === index) return;
+      var previous = position < index;
+      var available = Store.nodeOpen(p, entry.lesson.id);
+      var label = previous ? 'Vorige les' : position === index + 1 ? 'Hierna' : 'Daarna';
+      var content = [h('span.lesson-step-label', label), h('strong', entry.lesson.title)];
+      var row = available ? h('button.lesson-step', { type: 'button', onclick: function () { open(entry); } }, content) :
+        h('div.lesson-step.lesson-step-locked', content, h('span.lesson-lock', { 'aria-label': 'Nog gesloten' }, '🔒'));
+      nearby.appendChild(h('li', row));
+    });
+    if (nearby.children.length) section.appendChild(nearby);
+    return section;
+  }
+
+  Scr.path = function () {
+    var p = Store.current();
+    if (!p) { App.go('chooser'); return; }
+    var root = app();
+    var wrap = h('main.full-path');
+    wrap.appendChild(h('header.sub-top',
+      h('button.btn.ghost', { type: 'button', onclick: function () { App.go('home'); } }, '← Terug'),
+      h('h2', 'Hele leerpad')));
     var path = h('section.path');
-    var cur = currentId;
+    var cur = Store.currentNode(p);
     CONTENT.units.forEach(function (u, ui) {
       var unit = h('div.unit', { style: { '--uc': u.color } });
       var done = u.lessons.filter(function (l) { return Store.nodeDone(p, l.id); }).length;
@@ -267,9 +304,8 @@
       path.appendChild(unit);
     });
     path.appendChild(h('p.path-end', 'Meer eenheden volgen. 加油！'));
-    home.appendChild(path);
-    root.appendChild(home);
-
+    wrap.appendChild(path);
+    root.appendChild(wrap);
   };
 
   /* Paneel met uitleg over een les, en de startknop. */
