@@ -88,7 +88,7 @@
   }
 
   function safeToApply() {
-    return ['lesson', 'story', 'mine', 'wardrobe', 'adventure', 'china', 'newplayer'].indexOf(App.screen()) === -1;
+    return ['lesson', 'story', 'results', 'hongbao', 'mine', 'wardrobe', 'adventure', 'china', 'newplayer'].indexOf(App.screen()) === -1;
   }
 
   function familyProgress(local, remote) {
@@ -151,7 +151,7 @@
       if (manual) App.toast('Geen verbinding. Je kunt lokaal verder oefenen.');
       return Promise.resolve(false);
     }
-    if (App.screen() === 'lesson') return Promise.resolve(false);
+    if (!safeToApply()) return Promise.resolve(false);
     var state = Store.state();
     if (busy && busy.state === state) return busy.promise;
     var account = session.account;
@@ -191,7 +191,6 @@
     Store.load(Family.account());
     App.applyDevice();
     if (value) {
-      App.go('chooser');
       applyPlayers(familyProgress(Object.keys(Store.state().players).map(function (id) { return Store.state().players[id]; }), []));
       App.go('chooser');
       Family.sync(false).then(App.refreshPlayers);

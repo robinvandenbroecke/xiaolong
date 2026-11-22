@@ -8,6 +8,7 @@
   App.go = function (name, opts) {
     Snd.stop();
     closeModal();
+    var previous = current;
     current = name;
     window.scrollTo(0, 0);
     document.body.dataset.screen = name;
@@ -16,6 +17,7 @@
       mine: Mine.show, adventure: Mine.adventure, china: Mine.china, wardrobe: Mine.wardrobe, hongbao: Screens.hongbao, story: Screens.story, parent: Parent.show
     }[name];
     if (fn) fn(opts);
+    if (previous && previous !== current && Family.active() && (current === 'home' || current === 'chooser')) App.syncSoon();
     reloadIfReady();
   };
   App.screen = function () { return current; };
