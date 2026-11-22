@@ -171,8 +171,9 @@
     }
   };
   S.addSeconds = function (p, sec) { today(p).m += Math.round(sec); };
-  S.lessonDone = function (p, nodeId, lanterns) {
+  S.lessonDone = function (p, nodeId, lanterns, passed) {
     today(p).l += 1;
+    if (passed === false) return;
     var n = p.nodes[nodeId] || { n: 0, best: 0, t: 0 };
     n.n += 1; n.best = Math.max(n.best, lanterns); n.t = now();
     p.nodes[nodeId] = n;

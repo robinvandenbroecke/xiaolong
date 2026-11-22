@@ -214,9 +214,10 @@
   function weakness(player, id, skill) {
     var result = Store.ability(player, id, skill);
     if (!result.t) return 4;
-    if (result.streak === 0) return 7;
-    if (result.due <= U.dayNum()) return 5;
-    return [7, 3, 2, 0][result.streak];
+    var overdue = U.dayNum() - result.due;
+    if (result.streak === 0) return 9 + Math.min(3, Math.max(0, overdue));
+    if (overdue >= 0) return 6 + Math.min(2, overdue);
+    return [9, 3, 2, 0][result.streak];
   }
 
   function choices(ctx, it) {
@@ -232,6 +233,21 @@
       return weakness(ctx.player, id, exerciseSkill[type]);
     }));
   }
+
+  function reviewOrder(ctx, ids) {
+    var due = Store.dueItems(ctx.player);
+    return U.shuffle(ids).sort(function (a, b) {
+      return priority(ctx, b) - priority(ctx, a) ||
+        Number(due.indexOf(b) >= 0) - Number(due.indexOf(a) >= 0);
+    });
+  }
+
+  L.reviewCount = function (player) {
+    var due = Store.dueItems(player);
+    return Store.knownItems(player).filter(function (id) {
+      return due.indexOf(id) >= 0 || priority({ player: player }, id) >= 6;
+    }).length;
+  };
 
   function exFor(ctx, it, avoidTypes) {
     var types = choices(ctx, it);
@@ -249,55 +265,59 @@
   }
 
   /* Volgorde zonder hetzelfde woord twee keer na elkaar. */
-  function spread(list) {
+  function spread(list, previous) {
     var out = [], pool = list.slice(), guard = 0;
     while (pool.length && guard++ < 500) {
       var i = 0;
-      while (i < pool.length && out.length && pool[i].item && out[out.length - 1].item === pool[i].item) i++;
+      while (i < pool.length && pool[i].item && previous === pool[i].item) i++;
       if (i >= pool.length) i = 0;
       out.push(pool.splice(i, 1)[0]);
+      previous = out[out.length - 1].item;
     }
     return out;
   }
 
   /* Gewone les. */
-  function buildLes(ctx, lesson) {
+  function buildLes(ctx, lesson, focused) {
     var p = ctx.player, len = p.set.len || 12;
-    var fresh = lesson.new.filter(function (id) { return !Store.introduced(p, id); });
+    var lessonItems = lesson.new;
+    var fresh = lessonItems.filter(function (id) { return !Store.introduced(p, id); });
+    var known = Store.knownItems(p).filter(function (id) { return lessonItems.indexOf(id) < 0; });
+    var review = reviewOrder(ctx, known);
     var seq = [];
-    // kennismaking, telkens gevolgd door een makkelijke vraag over het vorige nieuwe woord
-    fresh.forEach(function (id, i) {
+    function listen(id) {
+      var it = item(id);
+      return { type: it.k !== 'z' && (it.em || it.sw) ? 'lp' : 'lb', item: id, easy: true };
+    }
+    var warmup = U.pick(known.filter(function (id) { return Store.ability(p, id, 'L').streak >= 2; }));
+    if (warmup) seq.push(listen(warmup));
+    fresh.forEach(function (id) {
       seq.push({ type: 'intro', item: id });
-      if (i > 0) seq.push({ type: item(fresh[i - 1]).k === 'z' ? 'zb' : (item(fresh[i - 1]).em || item(fresh[i - 1]).sw ? 'lp' : 'lb'), item: fresh[i - 1], easy: true });
+      seq.push(listen(id));
     });
-    if (fresh.length) {
-      var last = item(fresh[fresh.length - 1]);
-      seq.push({ type: last.k === 'z' ? 'zb' : (last.em || last.sw ? 'lp' : 'lb'), item: last.id, easy: true });
-    }
-    var body = [];
-    var lessonItems = lesson.new.slice();
-    // elk woord van deze les nog twee keer, op een andere manier
-    lessonItems.forEach(function (id) {
-      body.push(exFor(ctx, item(id), ['intro']));
-      body.push(exFor(ctx, item(id), [body[body.length - 1].type]));
+    var primary = lessonItems.map(function (id) {
+      var avoid = ['speak', 'echo'];
+      if (fresh.indexOf(id) >= 0) avoid.push(listen(id).type);
+      var ex = exFor(ctx, item(id), avoid);
+      ex.checkpoint = true;
+      return ex;
     });
-    // herhaling van woorden die aan de beurt zijn
-    var due = Store.dueItems(p).filter(function (id) { return lessonItems.indexOf(id) < 0; });
-    var need = Math.max(3, len - body.length - (fresh.length ? 1 : 0));
-    due.sort(function (a, b) { return priority(ctx, b) - priority(ctx, a); });
-    due.slice(0, need).forEach(function (id) { body.push(exFor(ctx, item(id))); });
-    // nog niet genoeg? dan zwakke of willekeurige gekende woorden
-    if (body.length < len) {
-      var known = U.shuffle(Store.knownItems(p).filter(function (id) { return lessonItems.indexOf(id) < 0 && due.indexOf(id) < 0; }));
-      known.sort(function (a, b) { return priority(ctx, b) - priority(ctx, a) || Store.box(p, a) - Store.box(p, b); });
-      known.slice(0, len - body.length).forEach(function (id) { body.push(exFor(ctx, item(id))); });
-    }
-    body = spread(U.shuffle(body)).slice(0, Math.max(len, lessonItems.length * 2));
-    // paren zoeken als er genoeg woorden met een plaatje zijn
-    var pairable = Store.knownItems(p).concat(lessonItems).filter(function (id, i, a) {
-      var x = item(id); return a.indexOf(id) === i && x.k !== 'z' && (x.em || x.sw);
+    var extra = primary.filter(function (ex) { return fresh.indexOf(ex.item) < 0; })
+      .map(function (ex) { return exFor(ctx, item(ex.item), [ex.type]); });
+    var reviewItems = review.filter(function (id) { return id !== warmup; });
+    var overdue = Store.dueItems(p);
+    var urgent = reviewItems.filter(function (id) { return priority(ctx, id) >= 6 || overdue.indexOf(id) >= 0; }).length;
+    var spare = Math.max(focused ? 0 : Math.min(2, urgent), (focused ? 6 : len) - fresh.length - primary.length - Number(!!warmup));
+    var reserve = focused ? 0 : Math.min(reviewItems.length, Math.ceil(spare / 2));
+    extra = extra.slice(0, spare - reserve);
+    var body = primary.concat(extra, reviewItems.slice(0, spare - extra.length).map(function (id) {
+      return exFor(ctx, item(id));
+    }));
+    body = spread(U.shuffle(body), seq.length ? seq[seq.length - 1].item : null);
+    var pairable = known.concat(lessonItems).filter(function (id) {
+      var x = item(id); return x.k !== 'z' && (x.em || x.sw);
     });
-    if (pairable.length >= 4) body.splice(Math.floor(body.length / 2), 0, { type: 'match', items: pairable });
+    if (!focused && pairable.length >= 3 && body.length >= 4) body.splice(Math.floor(body.length / 2), 0, { type: 'match', items: pairable });
     return seq.concat(body);
   }
 
@@ -353,11 +373,7 @@
   /* Oefenen: alles wat aan de beurt is. */
   function buildOefen(ctx) {
     var p = ctx.player, len = p.set.len || 12;
-    var due = Store.dueItems(p);
-    var ids = U.shuffle(Store.knownItems(p)).sort(function (a, b) {
-      return priority(ctx, b) - priority(ctx, a) ||
-        Number(due.indexOf(b) >= 0) - Number(due.indexOf(a) >= 0);
-    }).slice(0, len);
+    var ids = reviewOrder(ctx, Store.knownItems(p)).slice(0, len);
     var body = ids.map(function (id) { return exFor(ctx, item(id)); });
     var pairable = Store.knownItems(p).filter(function (id) { var x = item(id); return x.k !== 'z' && (x.em || x.sw); });
     if (pairable.length >= 4) body.push({ type: 'match', items: pairable });
@@ -379,8 +395,18 @@
     if (node.kind === 'toonspel') return buildToonspel(ctx);
     if (node.lesson.kind === 'toonles') return buildToon(ctx, node.lesson);
     if (node.lesson.kind === 'tekens') return buildTekens(ctx, node.lesson);
-    return buildLes(ctx, node.lesson);
+    return buildLes(ctx, node.lesson, node.focused);
   };
+
+  function repairFor(ex, it, info) {
+    if (ex.retry || info.noRetry || info.skill === 'S') return null;
+    if (info.sample) {
+      var other = U.pick((ex.tones || [1, 2, 3, 4]).filter(function (t) { return t !== info.sample.t; }));
+      return { type: 'tone', sample: info.sample, tones: [info.sample.t, other].sort() };
+    }
+    if (!it || !info.skill) return null;
+    return { type: ex.type === 'pb' ? 'hpy' : ex.type, item: it.id, easy: true };
+  }
 
   /* ---------- de les afspelen ---------- */
   L.run = function (player, node, onDone) {
@@ -388,7 +414,7 @@
     U.clear(app);
     var ctx = {
       player: player, node: node, stars: 0, combo: 0, bestCombo: 0, ok: 0, total: 0,
-      newItems: [], t0: Date.now(), retries: {}, noMic: false
+      newItems: [], retained: {}, t0: Date.now(), retries: {}, repairs: 0, queued: 0, checks: 0, checksOk: 0, noMic: false
     };
     var seq = L.build(ctx, node);
     // geluid alvast laden
@@ -408,7 +434,7 @@
     var sheet = h('div.ls-sheet');
     root.appendChild(top); root.appendChild(main); root.appendChild(sheet);
     app.appendChild(root);
-    var idx = 0, total = seq.length;
+    var idx = 0, total = seq.length, active, finished = false, pct = 0;
 
     closeBtn.addEventListener('click', function () {
       Snd.stop();
@@ -418,17 +444,19 @@
     });
 
     function progress() {
-      var pct = Math.min(100, Math.round(100 * idx / Math.max(1, total)));
+      pct = Math.max(pct, Math.round(100 * Math.max(0, idx - 1) / Math.max(1, total)));
       fill.style.width = pct + '%';
       bar.querySelector('.ls-head').style.left = 'calc(' + pct + '% - 18px)';
     }
 
     function next() {
+      if (finished) return;
       Snd.stop();
       sheet.className = 'ls-sheet';
       U.clear(sheet);
       if (idx >= seq.length) { finish(false); return; }
       var ex = seq[idx++];
+      active = ex;
       assisted = false;
       progress();
       U.clear(main);
@@ -451,16 +479,27 @@
       },
       begin: function () { answered = false; },
       usedHint: function () { assisted = true; },
-      /* ok: juist/fout; info: { item, skill, label (wat juist was), noGrade, retryType } */
+      /* ok: juist/fout; info bevat het woord, de vaardigheid en eventuele hulp. */
       answer: function (ok, info) {
-        if (answered) return; answered = true;
+        if (answered || finished) return; answered = true;
         info = info || {};
-        ctx.total += 1;
         var it = info.item ? item(info.item) : null;
+        var skillOk = info.skillOk !== undefined ? info.skillOk : ok;
+        if (!active.retry && !info.almost) {
+          ctx.total += 1;
+          if (skillOk) ctx.ok += 1;
+        }
+        if (active.checkpoint) {
+          ctx.checks += 1;
+          if (skillOk) ctx.checksOk += 1;
+        }
+        if (active.retry && skillOk) ctx.repairs += 1;
+        var retryQueued = false;
         if (ok) {
-          ctx.ok += 1; ctx.combo += 1; ctx.bestCombo = Math.max(ctx.bestCombo, ctx.combo);
+          if (!info.almost) ctx.combo += 1;
+          ctx.bestCombo = Math.max(ctx.bestCombo, ctx.combo);
           var add = info.stars || 1;
-          if (ctx.combo > 0 && ctx.combo % 5 === 0) { add += 2; Snd.fx('combo'); } else Snd.fx('good');
+          if (!info.almost && ctx.combo > 0 && ctx.combo % 5 === 0) { add += 2; Snd.fx('combo'); } else Snd.fx('good');
           ctx.stars += add; Store.addStars(player, add);
           if (!info.almost) { Mine.earn(player); ctx.coins = (ctx.coins || 0) + 1; }
           starEl.textContent = ctx.stars;
@@ -468,24 +507,29 @@
         } else {
           ctx.combo = 0;
           Snd.fx('oops');
-          // later in de les nog eens, op een makkelijkere manier
-          if (it && !info.noRetry && (ctx.retries[it.id] || 0) < 1) {
-            ctx.retries[it.id] = 1;
-            var easy = { H: it.em || it.sw ? 'hp' : 'hb', P: it.em || it.sw ? 'pp' : 'hpy', T: 'tp' }[info.skill];
-            if (it.k === 'z' || !easy) easy = it.k === 'z' ? 'zb' : (it.em || it.sw ? 'lp' : 'lb');
-            seq.splice(Math.min(seq.length, idx + 3), 0, { type: info.retryType || easy, item: it.id, easy: true, retry: true });
-            total = seq.length;
+          var repair = ctx.queued < 3 && idx < seq.length && repairFor(active, it, info);
+          if (repair) {
+            var key = (it ? it.id : info.sample.base + info.sample.t) + ':' + info.skill;
+            if (!ctx.retries[key]) {
+              ctx.retries[key] = true;
+              ctx.queued += 1;
+              repair.retry = true;
+              seq.splice(Math.min(seq.length, idx + 2), 0, repair);
+              total = seq.length;
+              retryQueued = true;
+            }
           }
         }
         comboEl.textContent = ctx.combo >= 3 ? '🔥' + ctx.combo : '';
-        if (it && !info.noGrade) {
-          Store.grade(player, it.id, ok);
-          Store.gradeAbility(player, it.id, info.skill,
-            info.skillOk !== undefined ? info.skillOk : ok, assisted || info.assisted);
+        if (it && !info.noGrade && !active.retry) {
+          var before = Store.ability(player, it.id, info.skill).streak;
+          if (!ok || !(assisted || info.assisted)) Store.grade(player, it.id, ok);
+          Store.gradeAbility(player, it.id, info.skill, skillOk, assisted || info.assisted);
+          if (before === 1 && Store.ability(player, it.id, info.skill).streak === 2) ctx.retained[it.id] = true;
         }
-        Store.countExercise(player, info.skillOk !== undefined ? info.skillOk : ok, info.skill);
+        Store.countExercise(player, skillOk, info.skill);
         Store.save();
-        showSheet(ok, it, info);
+        showSheet(ok, it, info, retryQueued);
       },
       next: next,
       sheet: sheet
@@ -496,7 +540,7 @@
       return U.pick(list);
     }
 
-    function showSheet(ok, it, info) {
+    function showSheet(ok, it, info, retryQueued) {
       U.clear(sheet);
       sheet.className = 'ls-sheet show ' + (ok ? 'good' : 'oops');
       var pr = praise(ok ? 'good' : 'try');
@@ -513,9 +557,10 @@
       } else if (info.label) {
         sheet.appendChild(h('div.sh-item', h('span.sh-nl', info.label)));
       }
+      if (retryQueued) sheet.appendChild(h('p.ex-hint', 'Dit komt straks terug.'));
       var btn = h('button.btn.primary.sh-next', { type: 'button' }, 'Verder');
       var myIdx = idx, gone = false;
-      function go() { if (gone || idx !== myIdx) return; gone = true; clearTimeout(auto); next(); }
+      function go() { if (finished || gone || idx !== myIdx) return; gone = true; clearTimeout(auto); next(); }
       btn.addEventListener('click', go);
       sheet.appendChild(btn);
       var auto = null;
@@ -530,18 +575,23 @@
     }
 
     function finish(aborted) {
+      if (finished) return;
+      finished = true;
+      Snd.stop();
       var secs = (Date.now() - ctx.t0) / 1000;
       Store.addSeconds(player, secs);
       var acc = ctx.total ? ctx.ok / ctx.total : 1;
       var lanterns = aborted ? 0 : acc >= 0.9 ? 3 : acc >= 0.7 ? 2 : 1;
       var nodeId = node.lesson ? node.lesson.id : node.kind;
-      if (!aborted) Store.lessonDone(player, nodeId, lanterns);
+      var needsPractice = !aborted && !Store.nodeDone(player, nodeId) && ctx.checks >= 2 && ctx.checksOk * 5 < ctx.checks * 3;
+      if (!aborted) Store.lessonDone(player, nodeId, lanterns, !needsPractice);
       Store.log({ type: 'les', player: player.id, name: player.prof.name, node: nodeId,
         title: node.lesson ? node.lesson.title : (node.kind === 'oefen' ? 'Oefenen' : 'Toonspel'),
         ok: ctx.ok, total: ctx.total, stars: ctx.stars, secs: Math.round(secs), aborted: aborted });
       Store.save();
       onDone({ aborted: aborted, coins: ctx.coins || 0, stars: ctx.stars, ok: ctx.ok, total: ctx.total, lanterns: lanterns,
-        newItems: ctx.newItems, secs: secs, bestCombo: ctx.bestCombo, nodeId: nodeId });
+        newItems: ctx.newItems, secs: secs, bestCombo: ctx.bestCombo, nodeId: nodeId,
+        repairs: ctx.repairs, retained: Object.keys(ctx.retained).length, needsPractice: needsPractice, retryNode: needsPractice ? node : null });
     }
 
     next();
@@ -687,7 +737,7 @@
     var it = item(ex.item);
     var showPy = api.showPy(it, true) && !(ex.independent && api.player.set.pinyin === 'fade');
     prompt(api, 'Wat betekent dit?', h('div.ex-hz', hzBlock(it, showPy, 'xl')));
-    var opts = optionsWith(api, it, 3, null);
+    var opts = optionsWith(api, it, ex.easy ? 2 : 3, null);
     multiple(api, opts.map(function (x) { return { el: h('span.card.nlc', h('span.lbl', x.nl)), ok: x.id === it.id }; }), { item: it.id, skill: 'H', assisted: showPy });
   };
   /* Pinyin -> plaatje (pinyin lezen) */
@@ -701,7 +751,7 @@
   EX.hpy = function (ex, api) {
     var it = item(ex.item);
     prompt(api, 'Hoe spreek je dit uit?', h('div.ex-hz', hzBlock(it, false, 'xl')));
-    var others = distractors(api.ctx, it, 1, 'pinyin', function (x) { return x.syl.length === it.syl.length; });
+    var others = ex.easy ? [] : distractors(api.ctx, it, 1, 'pinyin', function (x) { return x.syl.length === it.syl.length; });
     var variants = toneVariants(it, 1);
     var opts = U.shuffle([{ t: it.py, ok: true }].concat(variants.map(function (v) { return { t: v, ok: false }; }))
       .concat(others.map(function (x) { return { t: x.py, ok: false }; })));
@@ -745,7 +795,7 @@
     var it = item(ex.item);
     var file = au(it, 'any');
     prompt(api, 'Welke tonen hoor je?', h('div.ex-listen', speakerBtn(file, { big: true }), slowBtn(file), h('div.ex-hzsmall', hzBlock(it, false))));
-    var variants = toneVariants(it, 2);
+    var variants = toneVariants(it, ex.easy ? 1 : 2);
     var opts = U.shuffle([{ t: it.py, ok: true }].concat(variants.map(function (v) { return { t: v, ok: false }; })));
     multiple(api, opts.map(function (o) { return { el: pyCard(o.t), ok: o.ok }; }), { item: it.id, skill: 'T' });
     U.wait(250).then(function () { Snd.play(file); });
@@ -753,6 +803,7 @@
 
   /* Toon herkennen bij een losse lettergreep */
   function pickSyllable(ex, api) {
+    if (ex.sample) return ex.sample;
     // lettergreep uit de toonset (menselijke opname) of een gekend woord van één lettergreep
     var tones = ex.tones || [1, 2, 3, 4];
     var t = U.pick(tones);
@@ -781,7 +832,7 @@
     var opts = tones.map(function (t) {
       return { el: h('span.card.tonec', h('span', { html: toneIcon(t, 52) }), h('span.lbl', 'toon ' + t)), ok: t === s.t };
     });
-    multiple(api, opts, { item: s.item ? s.item.id : null, skill: 'T', label: markTone(s.base.replace('v', 'ü'), s.t) + ' is toon ' + s.t, noGrade: !s.item },
+    multiple(api, opts, { item: s.item ? s.item.id : null, skill: 'T', sample: s, label: markTone(s.base.replace('v', 'ü'), s.t) + ' is toon ' + s.t, noGrade: !s.item },
       function (ok) {
         if (!s.item) setTimeout(function () { Snd.play(s.file); }, 300);
       });
@@ -830,7 +881,7 @@
       // de juiste lijn erbij tekenen
       draw(U.isEink() ? 'rgba(0,0,0,.45)' : 'rgba(30,158,126,.85)', idealPath(s.t), 7);
       Snd.fx('swipe');
-      api.answer(ok, { item: s.item ? s.item.id : null, skill: 'T', noGrade: !s.item,
+      api.answer(ok, { item: s.item ? s.item.id : null, skill: 'T', sample: s, noGrade: !s.item,
         label: (ok ? 'Toon ' + s.t + ': ' : 'Het was toon ' + s.t + ': ') + markTone(s.base.replace('v', 'ü'), s.t) });
       if (!s.item) setTimeout(function () { Snd.play(s.file); }, 300);
     }

@@ -198,7 +198,7 @@
     side.appendChild(week);
 
     // knoppen
-    var due = Store.dueItems(p).length;
+    var due = Lesson.reviewCount(p);
     var acts = h('div.actions');
     var practice = h('button.act', { type: 'button', disabled: Store.knownItems(p).length < 3 },
       h('span.act-ic', '🔁'), h('span.act-t', 'Oefenen'), h('span.act-s', due ? due + ' klaar om te herhalen' : 'woorden herhalen'));
@@ -364,9 +364,12 @@
     wrap.appendChild(lan);
     wrap.appendChild(h('div.res-stats',
       h('div', h('strong', '+' + res.stars), h('span', 'sterren')),
-      h('div', h('strong', acc + '%'), h('span', 'juist')),
+      h('div', h('strong', res.total ? acc + '%' : '—'), h('span', res.retryNode !== undefined ? 'eerste poging' : 'juist')),
       h('div', h('strong', Math.max(1, Math.round(res.secs / 60))), h('span', 'minuten'))));
     if (res.coins) wrap.appendChild(h('p.mine-reward', '+' + res.coins + ' 🪙 · ' + Mine.label(p)));
+    if (res.repairs) wrap.appendChild(h('p.mine-reward', res.repairs === 1 ? '↺ Eén antwoord lukte bij de tweede kans.' : '↺ ' + res.repairs + ' antwoorden lukten bij de tweede kans.'));
+    if (res.retained) wrap.appendChild(h('p.mine-reward', res.retained === 1 ? 'Eén woord lukte op twee verschillende dagen.' : res.retained + ' woorden lukten op twee verschillende dagen.'));
+    if (res.needsPractice) wrap.appendChild(h('p', 'Nog een kort oefenrondje voor de volgende les.'));
     if (res.newItems && res.newItems.length) {
       var nw = h('div.res-new');
       nw.appendChild(h('p', 'Nieuw geleerd'));
@@ -380,10 +383,11 @@
       nw.appendChild(chips);
       wrap.appendChild(nw);
     }
-    var go = h('button.btn.primary.big', { type: 'button' }, 'Verder');
+    var go = h('button.btn.primary.big', { type: 'button' }, res.needsPractice ? 'Kort oefenrondje' : 'Verder');
     var destination = 'home';
-    go.addEventListener('click', function () { nextEvent(); });
+    go.addEventListener('click', function () { if (res.needsPractice) destination = 'retry'; nextEvent(); });
     wrap.appendChild(go);
+    if (res.needsPractice) wrap.appendChild(h('button.btn.ghost', { type: 'button', onclick: nextEvent }, 'Naar mijn draak'));
     if (Mine.balance(p) >= 6) {
       wrap.appendChild(h('button.btn.ghost', { type: 'button', onclick: function () {
         destination = 'mine';
@@ -395,7 +399,11 @@
     var queue = (events || []).slice();
     function nextEvent() {
       var e = queue.shift();
-      if (!e) { App.go(destination); return; }
+      if (!e) {
+        if (destination === 'retry') App.startLesson(Object.assign({}, res.retryNode, { focused: true }));
+        else App.go(destination);
+        return;
+      }
       if (e === 'hatch') Scr.hatch(nextEvent);
       else if (e === 'grow') Scr.grow(nextEvent);
       else if (e === 'goal') Scr.goalReached(nextEvent);
