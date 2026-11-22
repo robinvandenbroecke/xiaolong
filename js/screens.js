@@ -585,7 +585,7 @@
     var dots = h('div.st-dots');
     st.lines.forEach(function () { dots.appendChild(h('span')); });
     wrap.appendChild(h('header.ls-top', close, h('h2.st-title', st.title), dots));
-    var stage = h('div.st-stage');
+    var stage = h('div.st-stage', { tabindex: '0', 'aria-label': 'Verhaal of vraag' });
     wrap.appendChild(stage);
     var ctrl = h('div.st-ctrl');
     wrap.appendChild(ctrl);
@@ -597,6 +597,7 @@
       var ln = st.lines[i];
       U.$$('span', dots).forEach(function (d, k) { d.className = k < i ? 'seen' : k === i ? 'cur' : ''; });
       U.clear(stage);
+      stage.scrollTop = 0;
       var who = WHO[ln.who] || WHO.all;
       stage.appendChild(h('div.st-scene', ln.sc));
       var bubble = h('div.st-bubble', h('span.st-who', who.em + ' ' + who.nl));
@@ -642,6 +643,7 @@
       var qi = 0, okCount = 0;
       function q() {
         U.clear(stage); U.clear(ctrl);
+        stage.scrollTop = 0;
         if (qi >= st.qs.length) return finish();
         var qq = st.qs[qi];
         stage.appendChild(h('p.ex-q', 'Vraag ' + (qi + 1) + ' van ' + st.qs.length));

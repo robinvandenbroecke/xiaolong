@@ -384,9 +384,10 @@
     var comboEl = h('span.ls-combo');
     var closeBtn = h('button.ls-close', { type: 'button', 'aria-label': 'Stoppen' }, '✕');
     var top = h('header.ls-top', closeBtn, bar, h('div.ls-score', comboEl, h('span.star-ic', '★'), starEl));
-    var main = h('main.ls-main');
+    var main = h('main.ls-main', { tabindex: '0', 'aria-label': 'Oefening' });
+    var actions = h('div.ls-actions');
     var sheet = h('div.ls-sheet');
-    root.appendChild(top); root.appendChild(main); root.appendChild(sheet);
+    root.appendChild(top); root.appendChild(main); root.appendChild(h('div.ls-footer', actions, sheet));
     app.appendChild(root);
     var idx = 0, total = seq.length, active, finished = false, pct = 0;
 
@@ -408,12 +409,14 @@
       Snd.stop();
       sheet.className = 'ls-sheet';
       U.clear(sheet);
+      U.clear(actions);
       if (idx >= seq.length) { finish(false); return; }
       var ex = seq[idx++];
       active = ex;
       assisted = false;
       progress();
       U.clear(main);
+      main.scrollTop = 0;
       main.className = 'ls-main ex-' + ex.type;
       var fn = EX[ex.type];
       if (!fn || (ex.item && !item(ex.item))) { next(); return; }
@@ -423,7 +426,7 @@
     var answered = false;
     var assisted = false;
     var api = {
-      ctx: ctx, main: main, player: player, item: item,
+      ctx: ctx, main: main, actions: actions, player: player, item: item,
       showPy: function (it, strict) {
         var mode = player.set.pinyin;
         if (mode === 'always') return true;
@@ -499,20 +502,22 @@
       U.clear(sheet);
       sheet.className = 'ls-sheet show ' + (ok ? 'good' : 'oops');
       var pr = praise(ok ? 'good' : 'try');
+      var content = h('div.sh-content', { tabindex: '0', 'aria-label': 'Terugkoppeling' });
       var head = h('div.sh-head',
         h('span.sh-dragon', { html: Dragon.svg({ color: col, stage: Math.max(1, Store.stage(player)), mood: ok ? 'happy' : 'oops', crop: 'head' }) }),
         h('div.sh-words', h('strong', ok && info.almost ? 'Goed geprobeerd!' : ok ? U.pick(['Goed zo!', 'Super!', 'Knap!', 'Juist!', 'Straf!', 'Amai!']) : 'Oei, net niet.'),
           h('span.sh-zh', { lang: 'zh-CN' }, pr.hz, ' ', h('em', pr.py))));
       if (ok && !info.almost) head.appendChild(h('span.mine-coin', '+1 🪙'));
-      sheet.appendChild(head);
+      content.appendChild(head);
       if (it) {
         var reveal = h('div.sh-item', hzBlock(it, true, 'sm'), h('span.sh-nl', (it.em && it.k !== 'z' ? it.em + ' ' : '') + it.nl),
           speakerBtn(au(it)), slowBtn(au(it)));
-        sheet.appendChild(reveal);
+        content.appendChild(reveal);
       } else if (info.label) {
-        sheet.appendChild(h('div.sh-item', h('span.sh-nl', info.label)));
+        content.appendChild(h('div.sh-item', h('span.sh-nl', info.label)));
       }
-      if (retryQueued) sheet.appendChild(h('p.ex-hint', 'Dit komt straks terug.'));
+      if (retryQueued) content.appendChild(h('p.ex-hint', 'Dit komt straks terug.'));
+      sheet.appendChild(content);
       var btn = h('button.btn.primary.sh-next', { type: 'button' }, 'Verder');
       var myIdx = idx, gone = false;
       function go() { if (finished || gone || idx !== myIdx) return; gone = true; clearTimeout(auto); next(); }
@@ -625,14 +630,14 @@
       var sayBtn = h('button.btn.ghost', { type: 'button' }, '🎤 Zeg het na');
       sayBtn.addEventListener('click', function () {
         sayBtn.disabled = true;
-        echoInline(api, it, row).then(function () { sayBtn.disabled = false; });
+        echoInline(api, it).then(function () { sayBtn.disabled = false; });
       });
       row.appendChild(sayBtn);
     }
     var go = h('button.btn.primary', { type: 'button' }, 'Verder');
     go.addEventListener('click', function () { Snd.fx('tap'); api.next(); });
     row.appendChild(go);
-    api.main.appendChild(row);
+    api.actions.appendChild(row);
     // eerst het teken en de klank, dan pas pinyin en betekenis (zo kijkt het kind naar het teken)
     Snd.play(file).then(function () { return U.wait(200); }).then(function () {
       U.$$('rt', hzEl).forEach(function (r) { r.classList.remove('hide'); });
@@ -945,9 +950,9 @@
       });
     });
   }
-  function echoInline(api, it, row) {
+  function echoInline(api, it) {
     var area = h('div.echo-inline');
-    row.parentNode.insertBefore(area, row);
+    api.main.appendChild(area);
     return echoFlow(api, it, area).then(function (r) {
       if (r.good) { Snd.fx('good'); api.ctx.stars += 1; Store.addStars(api.player, 1); Store.save(); }
     });
@@ -1051,7 +1056,7 @@
     api.main.appendChild(card);
     var go = h('button.btn.primary', { type: 'button' }, 'Ik ben klaar');
     go.addEventListener('click', function () { api.next(); });
-    api.main.appendChild(h('div.intro-actions', go));
+    api.actions.appendChild(h('div.intro-actions', go));
   };
 
   EX.compintro = function (ex, api) {
@@ -1071,7 +1076,7 @@
     api.main.appendChild(card);
     var go = h('button.btn.primary', { type: 'button' }, 'Verder');
     go.addEventListener('click', function () { api.next(); });
-    api.main.appendChild(h('div.intro-actions', go));
+    api.actions.appendChild(h('div.intro-actions', go));
   };
 
   /* Welk teken heeft het onderdeel? */

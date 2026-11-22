@@ -62,7 +62,7 @@
       .replace(/[^a-z\u3400-\u9fff]/g, '');
   }
 
-  function openConversation(card, lesson, player, next) {
+  function openConversation(card, controls, lesson, player, next) {
     var opening = GROWTH_OPENINGS[lesson.id];
     var model = opening[2].join('');
     var accepted = [model, opening[3]].concat(opening[4]).map(normalizeReply);
@@ -103,23 +103,35 @@
       button('🔊 Luister', function () { Snd.play(lesson.id + '-start.mp3'); }),
       h('p.growth-chinese', { lang: 'zh-CN' }, model),
       player.set.pinyin === 'never' ? null : h('details.box', h('summary', 'Pinyin als hulp'), h('p', opening[1]), h('p', opening[3]))));
-    card.appendChild(finish);
+    controls.appendChild(finish);
+  }
+
+  function missionScreen(title, subtitle, progress) {
+    var root = h('main.growth');
+    var card = h('section.card.growth-task', { tabindex: '0', 'aria-label': 'Opdracht' });
+    var controls = h('div.growth-controls');
+    root.appendChild(h('header.growth-header',
+      h('div.sub-top', button('← Leerpad', function () { App.go('home'); }), h('h2', title)), subtitle, progress));
+    root.appendChild(card);
+    root.appendChild(controls);
+    U.clear(U.$('#app')).appendChild(root);
+    return { root: root, card: card, controls: controls };
   }
 
   Growth.show = function (opts) {
     var player = Store.current();
     if (player && opts && opts.quick) {
-      var quick = h('main.growth', h('header.sub-top', button('← Leerpad', function () { App.go('home'); }), h('h2', 'Probeer een gesprek')));
-      var quickCard = h('section.card.growth-task');
-      quick.appendChild(quickCard);
-      U.clear(U.$('#app')).appendChild(quick);
-      openConversation(quickCard, lessons['groei-a1-klas'], player, function () {
+      var quick = missionScreen('Probeer een gesprek');
+      var quickCard = quick.card;
+      openConversation(quickCard, quick.controls, lessons['groei-a1-klas'], player, function () {
         U.clear(quickCard);
+        U.clear(quick.controls);
+        quickCard.scrollTop = 0;
         quickCard.appendChild(h('p.growth-chinese', { lang: 'zh-CN' }, '我叫小明。'));
         Snd.play('groei-gesprek-antwoord.mp3');
         quickCard.appendChild(button('🔊 Luister opnieuw', function () { Snd.play('groei-gesprek-antwoord.mp3'); }));
         quickCard.appendChild(h('p', 'Het andere kind antwoordt dat het Xiaoming heet.'));
-        quickCard.appendChild(button('Naar het leerpad', function () { App.go('home'); }, 'primary'));
+        quick.controls.appendChild(button('Naar het leerpad', function () { App.go('home'); }, 'primary'));
       });
       return;
     }
@@ -130,14 +142,9 @@
     }
     var band = Growth.ageBand(player);
     var started = Date.now(), step = 0, score = 0, spoken = false;
-    var root = h('main.growth');
-    U.clear(U.$('#app')).appendChild(root);
-    root.appendChild(h('header.sub-top', button('← Leerpad', function () { App.go('home'); }), h('h2', lesson.title)));
-    root.appendChild(h('p.small', node.level + ' · ' + lesson.aim));
     var progress = h('progress', { max: 5, value: 0, 'aria-label': 'Stappen in deze missie' });
-    var card = h('section.card.growth-task');
-    root.appendChild(progress);
-    root.appendChild(card);
+    var view = missionScreen(lesson.title, h('p.small', node.level + ' · ' + lesson.aim), progress);
+    var card = view.card, controls = view.controls;
     var plan = [
       ['Luisteren', 'Luister naar het fragment en beantwoord de vraag.'],
       ['Lezen', 'Lees de tekst en zoek het antwoord.'],
@@ -150,25 +157,38 @@
       return h('details.box', { open: band === 0 }, h('summary', 'Woordenhulp'), h('p', meaning),
         player.set.pinyin === 'never' ? null : h('details.box', h('summary', 'Pinyin als hulp'), h('p', lesson.gloss)));
     }
+    function clearStep() {
+      U.clear(card);
+      U.clear(controls);
+      card.scrollTop = 0;
+    }
     function question() {
       Snd.stop();
-      U.clear(card);
+      clearStep();
       progress.value = step + 1;
       var current = step;
       var task = lesson.questions[current];
       var response = h('p.growth-feedback', { role: 'status' });
+      var text = h('div.growth-source');
+      var prompt = h('div.growth-prompt');
+      var grid = h('div.growth-question' + (current === 1 ? '.is-reading' : ''), text, prompt);
 
       card.appendChild(h('h3', plan[current][0]));
       card.appendChild(h('p', plan[current][1]));
       if (current === 0) {
         var fallback = h('details.box', h('summary', 'Lees mee'), chinese(lesson.text));
         var file = lesson.id + '.mp3';
-        card.appendChild(h('div.row', button('🔊 Luister', function () { Snd.play(file); }, 'primary'),
+        text.appendChild(h('div.row', button('🔊 Luister', function () { Snd.play(file); }, 'primary'),
           button('Langzaam', function () { Snd.play(file, { slow: true }); })));
-        card.appendChild(fallback);
-      } else if (current === 1) card.appendChild(chinese(lesson.text));
-      if (current < 2) card.appendChild(help());
-      card.appendChild(h('h4', task[0]));
+        text.appendChild(fallback);
+      } else if (current === 1) {
+        var passage = chinese(lesson.text);
+        passage.classList.add('growth-passage');
+        passage.tabIndex = 0;
+        text.appendChild(passage);
+      }
+      if (current < 2) text.appendChild(help());
+      prompt.appendChild(h('h4', task[0]));
       var answers = h('div.growth-answers');
       var locked = false;
       U.shuffle(task.slice(1)).forEach(function (answer) {
@@ -182,8 +202,9 @@
             b.disabled = true;
             if (b.textContent === task[1]) b.classList.add('growth-correct');
           });
-          response.textContent = correct ? '✓ Juist!' : 'Het juiste antwoord is ' + task[1];
-          card.appendChild(button('Verder', function () {
+          response.textContent = correct ? '✓ Juist!' : 'Bekijk het gemarkeerde antwoord.';
+          controls.appendChild(response);
+          controls.appendChild(button('Verder', function () {
             if (step !== current) return;
             step += 1;
             if (step < plan.length) question();
@@ -193,13 +214,13 @@
         if (current === 2) { choice.classList.add('growth-chinese'); choice.lang = 'zh-CN'; }
         answers.appendChild(choice);
       });
-      card.appendChild(answers);
-      card.appendChild(response);
+      prompt.appendChild(answers);
+      card.appendChild(grid);
     }
 
     function produce() {
       Snd.stop();
-      U.clear(card);
+      clearStep();
       progress.value = 4;
       card.appendChild(h('h3', 'Nu jij: spreek Chinees'));
       card.appendChild(h('p', lesson.tasks[band]));
@@ -217,8 +238,8 @@
         spoken = didSpeak;
         result();
       }
-      card.appendChild(button('Ik heb mijn antwoord gezegd', function () { finish(true); }, 'primary'));
-      card.appendChild(button('Later hardop oefenen', function () { finish(false); }));
+      controls.appendChild(button('Ik heb mijn antwoord gezegd', function () { finish(true); }, 'primary'));
+      controls.appendChild(button('Later hardop oefenen', function () { finish(false); }));
     }
 
     function result() {
@@ -237,20 +258,20 @@
       else showResult();
 
       function showResult() {
-        U.clear(U.$('#app')).appendChild(root);
-        U.clear(card);
+        U.clear(U.$('#app')).appendChild(view.root);
+        clearStep();
         progress.value = 5;
         card.appendChild(h('h3', passed ? 'Missie klaar!' : 'Probeer deze missie opnieuw'));
         card.appendChild(h('p', score + ' van 3 vragen juist · +' + stars + ' ★ · +' + score + ' 🪙'));
         if (missionCoins) card.appendChild(h('p.mine-reward', '+' + missionCoins + ' 🪙 voor een expeditiebeloning'));
         if (spoken) card.appendChild(h('p.small', 'Vergelijk je gesproken antwoord met het voorbeeld of bespreek het met iemand.'));
         card.appendChild(h('details.box', h('summary', 'Hoor het voorbeeld opnieuw'), button('🔊 Luister', function () { Snd.play(lesson.id + '-voorbeeld.mp3'); }), chinese(lesson.model)));
-        if (!passed) card.appendChild(button('Probeer opnieuw', function () { App.go('growth', { lesson: node }); }, 'primary'));
-        card.appendChild(button('Naar het leerpad', function () { App.go('home'); }, passed ? 'primary' : 'ghost'));
+        if (!passed) controls.appendChild(button('Probeer opnieuw', function () { App.go('growth', { lesson: node }); }, 'primary'));
+        controls.appendChild(button('Naar het leerpad', function () { App.go('home'); }, passed ? 'primary' : 'ghost'));
       }
     }
 
-    openConversation(card, lesson, player, question);
+    openConversation(card, controls, lesson, player, question);
   };
 
   window.Growth = Growth;

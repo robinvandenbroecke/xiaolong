@@ -425,7 +425,7 @@
     var player = Store.current();
     if (!player) { App.go('chooser'); return; }
     var found = data(player).discoveries;
-    var room = h('section.mine-room.adventure-room');
+    var room = h('section.mine-room.adventure-room.china-room');
     U.clear(U.$('#app')).appendChild(room);
     room.appendChild(h('header.sub-top', button('← Kamp', function () { App.go('adventure'); App.syncSoon(); }), h('h2', 'Ontdek China')));
     var progress = h('p.mine-balance', { role: 'status' });
@@ -437,13 +437,12 @@
     room.appendChild(progress);
     var list = h('div.adventure-list');
     discoveries.forEach(function (entry) {
-      var card = h('details.adventure-card',
+      var card = h('details.adventure-card', { name: 'china-discovery' },
         h('summary', entry.icon + ' ' + entry.title),
         h('p.small', entry.subject),
         h('p', entry.scene), h('p', entry.fact));
       var word = h('p', h('span.hz', { lang: 'zh-CN' }, entry.word), ' · ' + entry.py + ' · ' + entry.nl);
-      card.appendChild(word);
-      card.appendChild(button('🔊 Luister naar het woord', function () { Snd.play(entry.audio); }));
+      card.appendChild(h('div.china-word', word, button('🔊 Luister', function () { Snd.play(entry.audio); })));
       card.appendChild(h('p', h('strong', entry.ask)));
       var answers = h('div.china-answers');
       var feedback = h('p.small', { role: 'status' }, found[entry.id] ? '✓ Al ontdekt' : '');
@@ -480,6 +479,7 @@
   };
 
   function play(player, room, id, setId) {
+    room.classList.add('mine-round');
     var route = routes[id];
     var practice = id === 'practice';
     var set = sets.find(function (entry) { return entry.id === setId; }) || sets[0];
@@ -504,15 +504,16 @@
       var bridge = h('div.mine-bridge.route-' + route.className, { 'aria-label': index + ' van ' + order.length + ' opdrachten klaar',
         style: { 'grid-template-columns': 'repeat(' + order.length + ', minmax(0, 1fr))' } });
       for (var i = 0; i < order.length; i++) bridge.appendChild(h('span' + (i < index ? '.laid' : ''), ''));
-      room.appendChild(bridge);
+      var body = h('div.mine-round-body', { tabindex: '0', 'aria-label': 'Oefening' }, bridge);
+      room.appendChild(body);
       if (index >= order.length) {
-        room.appendChild(h('h3', practice ? 'Luisterproef klaar!' : id === 'bridge' ? 'Je bent aan de overkant!' :
+        body.appendChild(h('h3', practice ? 'Luisterproef klaar!' : id === 'bridge' ? 'Je bent aan de overkant!' :
           id === 'gate' ? 'De poort is open!' : 'Je staat boven op de toren!'));
-        room.appendChild(h('p', practice ? firstTry + ' van ' + order.length + ' meteen goed' :
+        body.appendChild(h('p', practice ? firstTry + ' van ' + order.length + ' meteen goed' :
           '+' + earned + ' drakenmunten' + (missionCoins ? ' · +' + missionCoins + ' voor missies' : '')));
-        if (newGold) room.appendChild(h('p.mine-reward', newGold === 1 ? '✦ Eén kaart werd goud!' : '✦ ' + newGold + ' kaarten werden goud!'));
-        if (practice && !before.complete && setProgress(player, set).complete) room.appendChild(h('p.mine-reward', '✦ Je hebt de geheime kaart vrijgespeeld!'));
-        room.appendChild(button(practice ? 'Naar mijn kaarten' : 'Naar het kamp', back, 'primary'));
+        if (newGold) body.appendChild(h('p.mine-reward', newGold === 1 ? '✦ Eén kaart werd goud!' : '✦ ' + newGold + ' kaarten werden goud!'));
+        if (practice && !before.complete && setProgress(player, set).complete) body.appendChild(h('p.mine-reward', '✦ Je hebt de geheime kaart vrijgespeeld!'));
+        room.appendChild(h('div.mine-round-footer', button(practice ? 'Naar mijn kaarten' : 'Naar het kamp', back, 'primary')));
         App.syncSoon();
         return;
       }
@@ -521,11 +522,11 @@
       var answered = false;
       var file = id === 'gate' ? null : cardAudio(correct);
       var audio = function () { Snd.play(file); };
-      room.appendChild(h('p', route.clue));
-      if (id === 'gate') room.appendChild(h('p.route-hanzi.hz', { lang: 'zh-CN' }, correct.hz));
-      else room.appendChild(button('🔊 Luister', audio, 'primary'));
+      body.appendChild(h('p', route.clue));
+      if (id === 'gate') body.appendChild(h('p.route-hanzi.hz', { lang: 'zh-CN' }, correct.hz));
+      else body.appendChild(button('🔊 Luister', audio, 'primary'));
       var options = h('div.mine-album');
-      var feedback = h('p.mine-feedback', { role: 'status' });
+      var feedback = h('p.mine-feedback.mine-round-footer', { role: 'status' });
       U.shuffle([correct].concat(U.shuffle(deck.filter(function (card) { return card !== correct; })).slice(0, route.choices - 1))).forEach(function (card) {
         var word = cardWord(card);
         var choice = h('button.mine-card', { type: 'button', onclick: function () {
@@ -566,7 +567,7 @@
           id === 'tower' ? null : h('span', word.nl));
         options.appendChild(choice);
       });
-      room.appendChild(options);
+      body.appendChild(options);
       room.appendChild(feedback);
       if (id !== 'gate') audio();
     }
