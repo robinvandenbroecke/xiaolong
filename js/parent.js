@@ -5,6 +5,8 @@
   var P = {};
   var tab = 'overzicht';
   var selected = null;
+  var updateStatus = '';
+  var updating = false;
 
   var SKILLS = [['L', 'Luisteren'], ['H', 'Tekens lezen'], ['P', 'Pinyin'], ['T', 'Tonen'], ['S', 'Spreken']];
 
@@ -16,8 +18,8 @@
     back.addEventListener('click', function () { App.go(Store.current() ? 'home' : 'chooser'); });
     wrap.appendChild(h('header.sub-top', back, h('h2', 'Ouderhoek')));
     var tabs = h('nav.tabs');
-    [['overzicht', 'Voortgang'], ['instellingen', 'Instellingen'], ['sync', 'Synchroniseren'], ['toestel', 'Dit toestel'], ['over', 'Over de app']].forEach(function (t) {
-      var b = h('button.tab' + (tab === t[0] ? '.on' : ''), { type: 'button' }, t[1]);
+    [['overzicht', 'Voortgang'], ['instellingen', 'Spelers'], ['sync', 'Account'], ['toestel', 'App']].forEach(function (t) {
+      var b = h('button.tab' + (tab === t[0] ? '.on' : ''), { type: 'button', 'aria-pressed': tab === t[0] ? 'true' : 'false' }, t[1]);
       b.addEventListener('click', function () { tab = t[0]; P.show(); });
       tabs.appendChild(b);
     });
@@ -25,7 +27,7 @@
     var body = h('div.tab-body');
     wrap.appendChild(body);
     root.appendChild(wrap);
-    ({ overzicht: overview, instellingen: settings, sync: sync, toestel: device, over: about })[tab](body);
+    ({ overzicht: overview, instellingen: settings, sync: sync, toestel: device })[tab](body);
   };
 
   /* ---------- voortgang ---------- */
@@ -80,7 +82,7 @@
       }
       body.appendChild(card);
     });
-    body.appendChild(h('p.small.muted', 'Met synchronisatie staat dit ook in de spreadsheet: tabbladen Overzicht, Woorden en Logboek.'));
+    if (!Family.active() && Sync.configured()) body.appendChild(h('p.small.muted', 'Je vindt deze voortgang ook in je Google-spreadsheet.'));
   }
   function stat(n, label) { return h('div.st', h('strong', String(n)), h('span', label)); }
 
@@ -88,6 +90,7 @@
   function settings(body) {
     var players = Store.players();
     if (!selected || !Store.player(selected)) selected = (Store.current() || players[0] || {}).id;
+    body.appendChild(h('h3', 'Kies een speler'));
     var pick = h('div.seg');
     players.forEach(function (p) {
       var b = h('button.seg-b' + (p.id === selected ? '.on' : ''), { type: 'button' }, p.prof.name);
@@ -100,7 +103,7 @@
     body.appendChild(pick);
     var p = Store.player(selected);
     if (!p) return;
-    function choice(label, help, key, options) {
+    function choice(label, help, key, options, container) {
       var row = h('div.set-row', h('div.set-l', h('strong', label), help ? h('span', help) : null));
       var seg = h('div.seg');
       options.forEach(function (o) {
@@ -109,13 +112,15 @@
         seg.appendChild(b);
       });
       row.appendChild(seg);
-      body.appendChild(row);
+      (container || body).appendChild(row);
     }
-    choice('Dagdoel', 'Sterren per dag voor het rode envelopje. Eén les levert er ongeveer 15 op.', 'goal', [[10, '10'], [20, '20'], [40, '40'], [60, '60']]);
+    body.appendChild(h('h3.parent-group-title', 'Leren'));
+    choice('Dagdoel', 'Sterren per dag voor het rode envelopje.', 'goal', [[10, '10'], [20, '20'], [40, '40'], [60, '60']]);
     choice('Lengte van een les', 'Aantal vragen, zonder de kennismaking met nieuwe woorden.', 'len', [[8, 'kort'], [12, 'gewoon'], [16, 'lang']]);
     choice('Pinyin boven de tekens', 'Stilaan weg: pinyin verdwijnt bij woorden die het kind goed kent, zodat het naar het teken kijkt.', 'pinyin', [['fade', 'stilaan weg'], ['always', 'altijd'], ['never', 'nooit']]);
     choice('Spreekoefeningen', 'Nazeggen met de toonlijn, en zelf zeggen met spraakherkenning (Chrome, met internet).', 'speak', [[true, 'aan'], [false, 'uit']]);
-    choice('Alle lessen open', 'Handig als het kind al wat kent en wil springen.', 'unlockAll', [[false, 'nee'], [true, 'ja']]);
+    var advanced = h('details.box.parent-details', h('summary', 'Geavanceerd'));
+    choice('Alle lessen open', 'Voor spelers die lessen willen overslaan.', 'unlockAll', [[false, 'nee'], [true, 'ja']], advanced);
     var row = h('div.row');
     var edit = h('button.btn.ghost', { type: 'button' }, 'Naam of kleur wijzigen');
     edit.addEventListener('click', function () { App.go('newplayer', { player: p, back: 'parent' }); });
@@ -126,8 +131,10 @@
         Store.deletePlayer(p); selected = null; App.syncSoon(); P.show();
       });
     });
-    row.appendChild(edit); row.appendChild(del);
-    body.appendChild(row);
+    body.appendChild(h('div.row', edit));
+    row.appendChild(del);
+    advanced.appendChild(row);
+    body.appendChild(advanced);
   }
 
   /* ---------- synchroniseren ---------- */
@@ -135,6 +142,13 @@
     Family.show(body);
     if (Family.active()) return;
     var c = Store.device().sync;
+    var spreadsheet = h('details.box.parent-details', h('summary', 'Google-spreadsheet'));
+    if (Sync.configured()) spreadsheet.open = true;
+    body.appendChild(spreadsheet);
+    spreadsheetSettings(spreadsheet, c);
+  }
+
+  function spreadsheetSettings(body, c) {
     if (Sync.configured()) {
       var st = c.status === 'fout' ? 'Probleem: ' + (c.msg || '') : c.last ? 'Laatst gesynchroniseerd: ' + new Date(c.last).toLocaleString('nl-BE') : 'Nog niet gesynchroniseerd.';
       body.appendChild(h('section.box', h('h3', 'Gekoppeld aan een Google-spreadsheet'), h('p', st)));
@@ -215,9 +229,30 @@
   /* ---------- dit toestel ---------- */
   function device(body) {
     var d = Store.device();
+    var status = h('p.small', { role: 'status' });
+    status.textContent = updateStatus;
+    var check = h('button.btn.primary', { type: 'button' }, 'Controleer op update');
+    check.disabled = updating;
+    check.addEventListener('click', function () {
+      function report(message) {
+        updateStatus = message;
+        status.textContent = message;
+      }
+      updating = true;
+      check.disabled = true;
+      report('Controleren op updates…');
+      App.checkForUpdate(report).then(function (message) {
+        updating = false;
+        check.disabled = false;
+        if (message) report(message);
+      });
+    });
+    body.appendChild(h('section.box', h('h3', 'App-update'), h('div.row', check), status));
+    body.appendChild(h('h3.parent-group-title', 'Weergave en geluid'));
+    var advanced = h('details.box.parent-details', h('summary', 'Installatie en toestelgegevens'));
     var name = h('input.inp', { type: 'text', value: d.name || '', placeholder: 'bv. tablet, telefoon papa, Boox', maxlength: '30' });
     name.addEventListener('change', function () { d.name = name.value.trim(); Store.save(); });
-    body.appendChild(h('div.set-row', h('div.set-l', h('strong', 'Naam van dit toestel'), h('span', 'Zie je terug in het logboek van de spreadsheet.')), name));
+    advanced.appendChild(h('div.set-row', h('div.set-l', h('strong', 'Naam van dit toestel'), h('span', 'Zie je terug in het logboek van de spreadsheet.')), name));
     function toggle(label, help, key, onSet) {
       var seg = h('div.seg');
       [[true, 'aan'], [false, 'uit']].forEach(function (o) {
@@ -233,19 +268,23 @@
     var caps = [];
     caps.push(Voice.hasMic() ? 'Microfoon: beschikbaar.' : 'Microfoon: niet beschikbaar in deze browser.');
     caps.push(Voice.hasASR() ? 'Spraakherkenning: beschikbaar (met internet).' : 'Spraakherkenning: niet beschikbaar. Nazeggen met de toonlijn werkt wel.');
-    body.appendChild(h('section.box', h('h3', 'Wat kan dit toestel?'), caps.map(function (c) { return h('p', c); })));
+    advanced.appendChild(h('section.box', h('h3', 'Wat kan dit toestel?'), caps.map(function (c) { return h('p', c); })));
     var inst = h('section.box', h('h3', 'Op het beginscherm zetten'),
       h('p', 'Android (Chrome): menu ⋮ > App installeren of Toevoegen aan startscherm. De app werkt daarna ook zonder internet.'),
       h('p', 'iPad of iPhone (Safari): deelknop > Zet op beginscherm.'),
       h('p', 'Boox: open de link in Chrome (via de Play Store) en zet de e-inkweergave hierboven aan.'));
-    body.appendChild(inst);
-    var reset = h('button.btn.danger', { type: 'button' }, 'Alles op dit toestel wissen');
+    advanced.appendChild(inst);
+    var reset = h('button.btn.danger', { type: 'button' }, 'Lokale spelers wissen');
     reset.addEventListener('click', function () {
       App.confirm('Alle spelers en voortgang op dit toestel wissen? Wat al in de spreadsheet staat, blijft daar.', 'Wissen', 'Annuleren').then(function (y) {
         if (y) { U.storage.del('xiaolong.v1'); location.reload(); }
       });
     });
-    body.appendChild(h('div.row', reset));
+    if (!Family.active()) advanced.appendChild(h('div.row', reset));
+    body.appendChild(advanced);
+    var info = h('details.box.parent-details', h('summary', 'Over Xiǎolóng'));
+    about(info);
+    body.appendChild(info);
   }
 
   /* ---------- over ---------- */

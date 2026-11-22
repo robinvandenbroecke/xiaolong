@@ -164,16 +164,19 @@
     if (params.get('eink') === '0') d.eink = false;
     document.documentElement.classList.toggle('eink', !!d.eink);
     if (d.eink) document.documentElement.style.setProperty('--pc', '#000');
+    else document.documentElement.style.removeProperty('--pc');
     Snd.setEnabled(d.sound !== false);
   };
 
   /* Een nieuwe worker neemt over zodra de versie voor offline gebruik klaarstaat. */
   var updateReady = false;
   var reloading = false;
+  var updateRegistration;
+  var manualUpdate;
 
   function reloadIfReady() {
     if (!updateReady || reloading || document.visibilityState === 'hidden') return;
-    if (current !== 'home' && current !== 'chooser' && current !== 'newplayer') return;
+    if (current !== 'home' && current !== 'chooser' && current !== 'newplayer' && !(manualUpdate && current === 'parent')) return;
     reloading = true;
     Store.save();
     location.reload();
@@ -192,6 +195,8 @@
     }
     serviceWorker.addEventListener('controllerchange', check);
     var registration = serviceWorker.register('sw.js', { updateViaCache: 'none' });
+    updateRegistration = registration;
+    registration.catch(function () {});
     var lastCheck = 0;
     function check() {
       var controller = checkController();
@@ -212,6 +217,66 @@
       if (document.visibilityState === 'visible') check();
     });
   }
+
+  App.checkForUpdate = function (report) {
+    if (!updateRegistration) return Promise.resolve('Deze browser ondersteunt geen app-updates.');
+    if (navigator.onLine === false) return Promise.resolve('Verbind met wifi en probeer opnieuw.');
+    if (manualUpdate) return manualUpdate;
+    if (updateReady) {
+      manualUpdate = Promise.resolve();
+      reloadIfReady();
+      return manualUpdate;
+    }
+
+    var serviceWorker = navigator.serviceWorker;
+    var initial = serviceWorker.controller;
+    var timeout;
+    var interval;
+    var stop;
+    var finish = new Promise(function (resolve) { stop = resolve; });
+    function inspect(registration, worker) {
+      if (updateReady || (initial && serviceWorker.controller && serviceWorker.controller !== initial)) {
+        updateReady = true;
+        report('Update klaar. De app wordt opnieuw geladen.');
+        reloadIfReady();
+        stop('De update opent zodra je terugkeert naar het startscherm.');
+        return;
+      }
+      if (worker && worker.state === 'redundant' && !registration.installing && !registration.waiting) {
+        stop('De update kon niet worden geladen. Probeer opnieuw.');
+      }
+    }
+    timeout = setTimeout(function () {
+      stop('De controle duurt langer dan verwacht. Probeer straks opnieuw.');
+    }, 45000);
+
+    manualUpdate = finish.then(function (message) {
+      clearTimeout(timeout);
+      clearInterval(interval);
+      manualUpdate = null;
+      return message;
+    });
+    updateRegistration.then(function (registration) {
+      var worker = registration.installing || registration.waiting;
+      return registration.update().then(function () {
+        if (!manualUpdate) return;
+        worker = registration.installing || registration.waiting || worker;
+        inspect(registration, worker);
+        if (!worker && !updateReady) {
+          stop('Je hebt de nieuwste versie.');
+          return;
+        }
+        report('Update wordt geladen…');
+        interval = setInterval(function () {
+          if (!initial && serviceWorker.controller) stop('Je hebt de nieuwste versie.');
+          else inspect(registration, worker);
+        }, 250);
+      });
+    }).catch(function () {
+      stop('Controleren lukt niet. Controleer je verbinding en probeer opnieuw.');
+    });
+    return manualUpdate;
+  };
 
   /* ---- opstarten ---- */
   App.boot = function () {

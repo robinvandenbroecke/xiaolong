@@ -586,3 +586,8 @@ html.eink .title .hz { color: #000; }
 .mine-bridge .laid { border: 2px solid #744527; background: #e4ad69; box-shadow: inset 0 -.25rem #b66f3a; }
 .mine-feedback { min-height: 2.8em; font-weight: bold; }
 .mine-coin { display: inline-block; margin-left: auto; white-space: nowrap; color: #382603; background: #ffdf85; border: 1px solid #91640d; padding: .1rem .38rem; border-radius: .35rem; font-weight: bold; }
+
+.parent .tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; overflow: visible; }
+.parent .tabs .tab { min-width: 0; padding-inline: .25rem; white-space: normal; min-height: 44px; }
+.parent-group-title { margin-top: 1rem; }
+.parent-details > summary { cursor: pointer; font-weight: 700; min-height: 44px; align-content: center; }
