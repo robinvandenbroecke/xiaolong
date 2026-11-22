@@ -262,7 +262,7 @@
       });
       body.appendChild(h('div.set-row', h('div.set-l', h('strong', label), h('span', help)), seg));
     }
-    toggle('E-inkweergave', 'Voor de Boox: zwart-wit, geen bewegingen, dikke lijnen.', 'eink', App.applyDevice);
+    toggle('E-inkweergave', 'Voor BOOX: lichte vlakken, donkere lijnen, rustige kleuren en geen animaties.', 'eink', App.applyDevice);
     if (d.sound === undefined) d.sound = true;
     toggle('Geluidjes', 'De effecten. De Chinese stemmen hoor je altijd.', 'sound', App.applyDevice);
     var caps = [];

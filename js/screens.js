@@ -144,6 +144,8 @@
 
     // linkerkolom: draak, doel, week
     var side = h('section.side');
+    var currentId = Store.currentNode(p);
+    var currentLesson = Store.allNodes().filter(function (entry) { return entry.lesson.id === currentId; })[0];
     var stage = Store.stage(p);
     var dt = Store.dayTotals(p);
     var goal = p.set.goal || 20;
@@ -167,6 +169,16 @@
     var ns = Store.nextStage(p);
     hero.appendChild(h('p.stage-name', Store.STAGES[stage].nl + (ns && stage > 0 ? ' · nog ' + (ns.min - Store.totalStars(p)) + ' ★ tot ' + ns.nl.toLowerCase() : '')));
     side.appendChild(hero);
+    if (currentLesson) {
+      var resume = h('button.btn.primary.home-resume', { type: 'button' },
+        h('strong', stage ? 'Verder oefenen' : 'Speel je eerste les'),
+        h('span', currentLesson.lesson.title));
+      resume.addEventListener('click', function () {
+        Snd.unlock();
+        Scr.nodeSheet(p, currentLesson.unit, currentLesson.lesson);
+      });
+      side.appendChild(resume);
+    }
 
     // dagdoel en envelopje
     var pct = Math.min(100, Math.round(100 * dt.s / goal));
@@ -205,12 +217,14 @@
     album.addEventListener('click', function () { App.go('album'); });
     acts.appendChild(practice); acts.appendChild(tones); acts.appendChild(album);
     side.appendChild(acts);
-    side.appendChild(h('button.mine-entry.adventure-entry', { type: 'button', onclick: function () { App.go('adventure'); } },
+    var rewards = h('div.home-rewards');
+    rewards.appendChild(h('button.mine-entry.adventure-entry', { type: 'button', onclick: function () { App.go('adventure'); } },
       h('strong', '🐉 Drakenexpeditie'), h('span', 'Missies en beloningen')));
-    side.appendChild(h('button.mine-entry', { type: 'button', onclick: function () { App.go('mine'); } },
+    rewards.appendChild(h('button.mine-entry', { type: 'button', onclick: function () { App.go('mine'); } },
       h('strong', '⛏ Blokkenmijn'), h('span', Mine.label(p))));
-    side.appendChild(h('button.mine-entry', { type: 'button', onclick: function () { App.go('wardrobe'); } },
+    rewards.appendChild(h('button.mine-entry', { type: 'button', onclick: function () { App.go('wardrobe'); } },
       h('strong', '👑 Drakengarderobe'), h('span', Mine.balance(p) + ' 🪙')));
+    side.appendChild(rewards);
 
     // samen-doel
     if (Store.players().length > 1) {
@@ -226,8 +240,7 @@
 
     // leerpad
     var path = h('section.path');
-    var cur = Store.currentNode(p);
-    var curEl = null;
+    var cur = currentId;
     CONTENT.units.forEach(function (u, ui) {
       var unit = h('div.unit', { style: { '--uc': u.color } });
       var done = u.lessons.filter(function (l) { return Store.nodeDone(p, l.id); }).length;
@@ -249,7 +262,6 @@
         n.appendChild(h('span.node-title', l.title));
         if (isDone) n.appendChild(h('span.node-stars', '🏮'.repeat(Math.max(1, best))));
         nodes.appendChild(n);
-        if (isCur) curEl = n;
       });
       unit.appendChild(nodes);
       path.appendChild(unit);
@@ -257,11 +269,7 @@
     path.appendChild(h('p.path-end', 'Meer eenheden volgen. 加油！'));
     home.appendChild(path);
     root.appendChild(home);
-    if (curEl && cur !== CONTENT.units[0].lessons[0].id) setTimeout(function () {
-      var r = curEl.getBoundingClientRect(), pr = path.getBoundingClientRect();
-      if (path.scrollHeight > path.clientHeight + 10) path.scrollTop += r.top - pr.top - path.clientHeight / 3;
-      else window.scrollTo(0, Math.max(0, window.scrollY + r.top - window.innerHeight / 2));
-    }, 60);
+
   };
 
   /* Paneel met uitleg over een les, en de startknop. */
