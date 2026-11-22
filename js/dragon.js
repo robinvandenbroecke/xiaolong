@@ -30,6 +30,7 @@
     if (opts.crop === 'head') sc = 1;
     s.push('<g transform="translate(100 204) scale(' + sc + ') translate(-100 -204)" stroke-linejoin="round">');
     var body = opts.crop !== 'head';
+    var outfit = opts.outfit || {};
     // staart
     if (body) s.push(outlined('M132,178 C168,184 182,156 168,138 C160,128 148,134 153,144', main, 14));
     if (body) s.push('<path d="M150,147 C140,137 149,123 158,127 C156,133 163,137 160,147 Z" fill="' + horn + '" stroke="' + INK + '" stroke-width="2.5"/>');
@@ -39,14 +40,22 @@
     if (body) [160, 172, 184].forEach(function (y) {
       s.push('<path d="M' + (86 - (y - 160) * 0.08) + ',' + y + ' Q100,' + (y + 6) + ' ' + (114 + (y - 160) * 0.08) + ',' + y + '" stroke="' + dark + '" stroke-opacity=".35" stroke-width="2" fill="none"/>');
     });
-    if (body && opts.outfit && opts.outfit.body === 'cape') {
-      s.push('<path d="M68,133 Q100,150 132,133 L151,192 Q136,211 118,197 L107,155 L93,155 L82,197 Q64,211 49,192 Z" fill="#8741a5" stroke="#23233F" stroke-width="3"/>');
+    if (body && (outfit.body === 'cape' || outfit.body === 'skycape')) {
+      var cape = outfit.body === 'cape' ? '#d92538' : '#343d83';
+      s.push('<path d="M68,133 Q100,150 132,133 L151,192 Q136,211 118,197 L107,155 L93,155 L82,197 Q64,211 49,192 Z" fill="' + cape + '" stroke="#23233F" stroke-width="3"/>');
       s.push('<path d="M55,190 Q68,201 78,193 M122,193 Q132,201 145,190" fill="none" stroke="#f6b73c" stroke-width="3"/>');
+    }
+    if (body && outfit.body === 'armor') {
+      s.push('<path d="M67,140 L82,132 H118 L133,140 L125,175 L100,189 L75,175 Z" fill="#48a179" stroke="#23233F" stroke-width="3"/><path d="M100,142 L113,156 L100,174 L87,156 Z" fill="#c3f9ce" stroke="#246653" stroke-width="3"/>');
     }
     // voeten
     if (body) [82, 118].forEach(function (x) {
       s.push('<ellipse cx="' + x + '" cy="199" rx="15" ry="8" fill="' + dark + '" stroke="' + INK + '" stroke-width="3"/>');
       s.push('<path d="M' + (x - 6) + ',203 v-4 M' + x + ',204 v-4 M' + (x + 6) + ',203 v-4" stroke="' + belly + '" stroke-width="2" stroke-linecap="round"/>');
+    });
+    if (body && (outfit.feet === 'boots' || outfit.feet === 'cloudboots')) [82, 118].forEach(function (x) {
+      var boot = outfit.feet === 'boots' ? '#d92538' : '#dbe9ff';
+      s.push('<path d="M' + (x - 9) + ',187 h18 v8 q9,1 8,10 h-34 q-1,-8 8,-10 Z" fill="' + boot + '" stroke="#23233F" stroke-width="3"/>');
     });
     // armen
     if (!body) { /* alleen het hoofd */ } else if (mood === 'cheer') {
@@ -86,10 +95,25 @@
       s.push('<path d="' + (long ? 'M128,108 C148,110 164,122 166,138 C167,146 158,148 156,142' : 'M128,108 C142,110 152,116 158,126') + '" stroke="' + horn + '" stroke-width="3" fill="none" stroke-linecap="round"/>');
     }
     s.push(face(mood));
-    if (opts.outfit && opts.outfit.head === 'crown') {
+    if (outfit.head === 'band') {
+      s.push('<path d="M56,68 Q100,49 144,68 L147,76 Q100,59 53,76 Z" fill="#e98f36" stroke="#23233F" stroke-width="2"/><circle cx="100" cy="63" r="4" fill="#fff1c6"/>');
+    }
+    if (outfit.head === 'glasses') {
+      s.push('<path d="M66,82 H134" stroke="#23233F" stroke-width="5"/><rect x="67" y="73" width="26" height="18" rx="6" fill="#b4e7fb" stroke="#23233F" stroke-width="3"/><rect x="107" y="73" width="26" height="18" rx="6" fill="#b4e7fb" stroke="#23233F" stroke-width="3"/>');
+    }
+    if (outfit.head === 'crown' || outfit.head === 'starcrown') {
       s.push('<path d="M76,52 L71,27 L88,38 L100,19 L112,38 L129,27 L124,52 Z" fill="#f6b73c" stroke="#23233F" stroke-width="3"/><circle cx="100" cy="43" r="5" fill="#dd4a61" stroke="#23233F" stroke-width="2"/>');
     }
-    if (body && opts.outfit && opts.outfit.neck === 'medal') {
+    if (outfit.head === 'starcrown') {
+      s.push('<path d="M100,24 L104,32 L113,33 L106,39 L108,48 L100,44 L92,48 L94,39 L87,33 L96,32 Z" fill="#b3e6ff" stroke="#23233F" stroke-width="2"/>');
+    }
+    if (body && outfit.neck === 'scarf') {
+      s.push('<path d="M77,126 Q101,138 124,126 L126,137 Q108,146 98,141 L91,166 L81,161 L90,140 Q81,139 75,135 Z" fill="#55bc98" stroke="#23233F" stroke-width="3"/>');
+    }
+    if (body && outfit.neck === 'lantern') {
+      s.push('<path d="M79,129 L100,150 L121,129" fill="none" stroke="#b87827" stroke-width="3"/><rect x="91" y="149" width="18" height="19" rx="7" fill="#f34f41" stroke="#23233F" stroke-width="2"/><path d="M96,152 V165 M104,152 V165 M100,168 V176" stroke="#f6b73c" stroke-width="2"/>');
+    }
+    if (body && outfit.neck === 'medal') {
       s.push('<path d="M78,130 L100,154 L122,130" fill="none" stroke="#3964ad" stroke-width="6"/><circle cx="100" cy="158" r="9" fill="#f6b73c" stroke="#23233F" stroke-width="2"/><path d="M100,153 V163 M95,158 H105" stroke="#945622" stroke-width="2"/>');
     }
     s.push('</g>');
@@ -164,7 +188,7 @@
     forPlayer: function (p, mood, extra) {
       var o = { color: Store.colorOf(p), stage: Store.stage(p), mood: mood || 'normal' };
       o.outfit = {};
-      ['head', 'body', 'neck'].forEach(function (slot) {
+      ['head', 'body', 'neck', 'feet'].forEach(function (slot) {
         var selection = p.outfit && p.outfit[slot];
         if (selection && p.mine && p.mine.gear && p.mine.gear[selection.id]) o.outfit[slot] = selection.id;
       });

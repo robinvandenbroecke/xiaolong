@@ -5,10 +5,48 @@
   var Mine = {};
   var price = 6;
   var gear = [
+    { id: 'band', slot: 'head', name: 'Ontdekkersband', icon: '🧢', price: 4 },
+    { id: 'boots', slot: 'feet', name: 'Rode springlaarzen', icon: '🥾', price: 6 },
+    { id: 'scarf', slot: 'neck', name: 'Jadesjaal', icon: '🧣', price: 7 },
+    { id: 'medal', slot: 'neck', name: 'Drakenmedaille', icon: '🏅', price: 8 },
+    { id: 'glasses', slot: 'head', name: 'Vliegbril', icon: '🥽', price: 10, mission: 'bridge' },
     { id: 'crown', slot: 'head', name: 'Gouden kroon', icon: '👑', price: 12 },
-    { id: 'cape', slot: 'body', name: 'Paarse cape', icon: '🟣', price: 16 },
-    { id: 'medal', slot: 'neck', name: 'Drakenmedaille', icon: '🏅', price: 8 }
+    { id: 'cape', slot: 'body', name: 'Rode heldencape', icon: '🦸', price: 16 },
+    { id: 'lantern', slot: 'neck', name: 'Lantaarnhanger', icon: '🏮', price: 14, mission: 'lessons' },
+    { id: 'armor', slot: 'body', name: 'Jadeharnas', icon: '🛡', price: 18, mission: 'gate' },
+    { id: 'cloudboots', slot: 'feet', name: 'Wolkenlaarzen', icon: '☁️', price: 18, mission: 'days' },
+    { id: 'starcrown', slot: 'head', name: 'Sterrenkroon', icon: '🌟', price: 24, mission: 'tower' },
+    { id: 'skycape', slot: 'body', name: 'Nachtcape', icon: '🌙', price: 28, mission: 'master' }
   ];
+  var missions = [
+    { id: 'bridge', name: 'De oversteek', icon: '🌉', hint: 'Bouw de brug in de Blokkenmijn.', target: 1, reward: 6, route: 'bridge',
+      progress: function (p) { return Number(!!data(p).runs.bridge); } },
+    { id: 'lessons', name: 'Het lantaarnpad', icon: '🏮', hint: 'Speel drie verschillende lessen op het leerpad.', target: 3, reward: 8, route: 'home',
+      progress: function (p) { return Store.allNodes().filter(function (node) { return Store.nodeDone(p, node.lesson.id); }).length; } },
+    { id: 'gate', name: 'De tekenpoort', icon: '⛩', hint: 'Lees zes Chinese tekens om de poort te openen.', target: 1, reward: 10, route: 'gate',
+      progress: function (p) { return Number(!!data(p).runs.gate); } },
+    { id: 'days', name: 'Drie dagen op pad', icon: '☁️', hint: 'Oefen op drie verschillende dagen. Je mag dagen overslaan.', target: 3, reward: 10, route: 'home',
+      progress: function (p) {
+        var days = {};
+        Object.keys(p.days || {}).forEach(function (day) { if (Store.dayTotals(p, day).k > 0) days[day] = true; });
+        Object.keys(data(p).trailDays).forEach(function (day) { days[day] = true; });
+        return Object.keys(days).length;
+      } },
+    { id: 'tower', name: 'De wolkentoren', icon: '🗼', hint: 'Luister en kies telkens het juiste Chinese teken.', target: 1, reward: 12, route: 'tower',
+      progress: function (p) { return Number(!!data(p).runs.tower); } },
+    { id: 'master', name: 'Op eigen vleugels', icon: '✨', hint: 'Herken acht tekens zelfstandig in je lessen, telkens op meerdere dagen.', target: 8, reward: 16, route: 'home',
+      progress: function (p) {
+        var hanzi = (p.ability && p.ability.H) || {};
+        return Object.keys(hanzi).filter(function (id) { return hanzi[id].streak >= 2; }).length;
+      } }
+  ];
+
+  var routes = {
+    bridge: { title: 'Bouw de brug', clue: 'Luister en kies de juiste tekening.', choices: 2, className: 'bridge' },
+    gate: { title: 'Open de tekenpoort', clue: 'Lees het teken en kies wat het betekent.', choices: 3, className: 'gate' },
+    tower: { title: 'Beklim de wolkentoren', clue: 'Luister en tik op het juiste teken.', choices: 4, className: 'tower' }
+  };
+  var symbols = { hout: '🪵', vuur: '🔥', water: '💧', berg: '⛰️', zon: '☀️', draak: '🐉' };
   var cards = [
     { id: 'hout', name: 'Takbever', hz: '木', py: 'mù', word: 'hout', audio: 'mu-h.mp3', sky: '#f4ce8e', palette: ['#643c2c','#a66a46','#f4d198','#fff1ce'], art: ['..........','.11....11.','.12222221.','1222222221','1202222021','1223333221','.13300331.','..344443..','...1111...','..11..11..'] },
     { id: 'vuur', name: 'Vonkvos', hz: '火', py: 'huǒ', word: 'vuur', audio: 'huo-h.mp3', sky: '#ffcb9d', palette: ['#6d2532','#ec6939','#ffc34e','#fff0cc'], art: ['..........','1........1','12......21','123....321','1222222221','.12222221.','.13022031.','..134431..','....11....','..........'] },
@@ -20,7 +58,7 @@
 
   function data(player) {
     if (!player.mine) player.mine = {};
-    ['earned', 'spent', 'cards', 'practice', 'gear'].forEach(function (key) {
+    ['earned', 'spent', 'cards', 'practice', 'gear', 'missions', 'runs', 'trailDays'].forEach(function (key) {
       if (!player.mine[key]) player.mine[key] = {};
     });
     return player.mine;
@@ -36,7 +74,10 @@
 
   Mine.balance = function (player) {
     var wallet = data(player);
-    return Math.max(0, sum(wallet.earned) - sum(wallet.spent));
+    var bonus = missions.reduce(function (total, mission) {
+      return total + (wallet.missions[mission.id] ? mission.reward : 0);
+    }, 0);
+    return Math.max(0, sum(wallet.earned) + bonus - sum(wallet.spent));
   };
 
   function increment(map, amount) {
@@ -114,7 +155,7 @@
       reveal(player, result.card, result.duplicate ? 'Dubbele kaart · 2 munten terug' : 'Nieuwe kaart!');
     }, 'primary');
     pack.disabled = balance < price;
-    room.appendChild(h('div.row', pack, button('Bouw de brug', function () { play(player, room); }), button('Drakengarderobe', function () { App.go('wardrobe'); })));
+    room.appendChild(h('div.row', pack, button('Bouw de brug', function () { App.go('adventure', { route: 'bridge' }); }), button('Drakengarderobe', function () { App.go('wardrobe'); })));
     var album = h('div.mine-album');
     cards.forEach(function (card) {
       var owned = !!data(player).cards[card.id];
@@ -140,17 +181,29 @@
     U.clear(U.$('#app')).appendChild(room);
     room.appendChild(h('header.sub-top', button('← Terug', function () { App.go('home'); App.syncSoon(); }), h('h2', 'Drakengarderobe')));
     room.appendChild(h('p.mine-balance', balance + ' 🪙'));
+    room.appendChild(button('Naar de missies', function () { App.go('adventure'); }));
     room.appendChild(h('div.wardrobe-dragon', { html: Dragon.forPlayer(player, 'happy', { stage: Math.max(1, Store.stage(player)) }) }));
     if (!player.hatch) room.appendChild(h('p.small', 'Zo ziet je draak eruit zodra hij uit het ei komt.'));
+    var filters = [['all', 'Alles'], ['head', 'Hoofd'], ['body', 'Lijf'], ['neck', 'Hals'], ['feet', 'Voeten']];
+    var filter = Mine.wardrobeFilter || 'all';
+    var tabbar = h('div.row');
+    filters.forEach(function (entry) {
+      var tab = button(entry[1], function () { Mine.wardrobeFilter = entry[0]; Mine.wardrobe(); }, filter === entry[0] ? 'primary' : 'ghost');
+      tab.setAttribute('aria-pressed', String(filter === entry[0]));
+      tabbar.appendChild(tab);
+    });
+    room.appendChild(tabbar);
     var list = h('div.wardrobe-items');
-    gear.forEach(function (item) {
+    gear.filter(function (item) { return filter === 'all' || item.slot === filter; }).forEach(function (item) {
       var owned = !!wallet.gear[item.id];
+      var locked = !owned && item.mission && !wallet.missions[item.mission];
+      var mission = locked ? missions.filter(function (m) { return m.id === item.mission; })[0] : null;
       var choice = player.outfit && player.outfit[item.slot];
       var worn = owned && choice && choice.id === item.id;
       var label = owned ? (worn ? 'Uitdoen' : 'Aandoen') : 'Koop · ' + item.price + ' 🪙';
       var action = button(label, function () {
         if (!wallet.gear[item.id]) {
-          if (Mine.balance(player) < item.price) return;
+          if (locked || Mine.balance(player) < item.price) return;
           increment(wallet.spent, item.price);
           wallet.gear[item.id] = Date.now();
         }
@@ -160,30 +213,87 @@
         App.syncSoon();
         Mine.wardrobe();
       }, 'primary');
-      action.disabled = !owned && balance < item.price;
-      if (!owned && action.disabled) action.textContent = 'Nog ' + (item.price - balance) + ' 🪙 sparen';
+      action.disabled = !!locked || (!owned && balance < item.price);
+      if (locked) action.textContent = item.price + ' 🪙 na missie';
+      else if (!owned && action.disabled) action.textContent = 'Nog ' + (item.price - balance) + ' 🪙 sparen';
       action.setAttribute('aria-label', item.name + ' · ' + action.textContent);
       list.appendChild(h('div.mine-card', h('span.wardrobe-icon', { 'aria-hidden': 'true' }, item.icon),
-        h('strong', item.name), action));
+        h('strong', item.name), mission ? h('span', 'Missie: ' + mission.name) : null, action));
     });
     room.appendChild(list);
   };
 
-  function play(player, room) {
+  Mine.adventure = function (opts) {
+    var player = Store.current();
+    if (!player) { App.go('chooser'); return; }
+    var wallet = data(player);
+    var room = h('section.mine-room.adventure-room');
+    U.clear(U.$('#app')).appendChild(room);
+    if (opts && Object.prototype.hasOwnProperty.call(routes, opts.route)) {
+      play(player, room, opts.route);
+      return;
+    }
+    room.appendChild(h('header.sub-top', button('← Terug', function () { App.go('home'); App.syncSoon(); }), h('h2', 'Drakenexpeditie')));
+    var claimed = missions.filter(function (mission) { return !!wallet.missions[mission.id]; }).length;
+    var rank = claimed === missions.length ? 'Wolkenwachter' : claimed >= 3 ? 'Drakenridder' : 'Ontdekker';
+    room.appendChild(h('div.adventure-banner',
+      h('div.wardrobe-dragon', { html: Dragon.forPlayer(player, 'happy', { stage: Math.max(1, Store.stage(player)) }) }),
+      h('div', h('strong', rank), h('p', claimed + ' van ' + missions.length + ' missies · ' + Mine.balance(player) + ' 🪙'))));
+    room.appendChild(h('div.row',
+      button('Drakengarderobe', function () { App.go('wardrobe'); }),
+      button('Kaarten & pakjes', function () { App.go('mine'); })));
+    var training = h('details.box', h('summary', 'Beluister de zes woorden'));
+    var previews = h('div.adventure-words');
+    cards.forEach(function (card) {
+      previews.appendChild(button(symbols[card.id] + ' ' + card.word + ' · ' + card.hz,
+        function () { Snd.play(card.audio); }));
+    });
+    training.appendChild(previews);
+    room.appendChild(training);
+    var list = h('div.adventure-list');
+    missions.forEach(function (mission) {
+      var amount = Math.min(mission.target, mission.progress(player));
+      var done = !!wallet.missions[mission.id];
+      var card = h('section.adventure-card', h('h3', mission.icon + ' ' + mission.name), h('p', mission.hint),
+        h('progress', { value: done ? mission.target : amount, max: mission.target, 'aria-label': mission.name }),
+        h('span.small', done ? '✓ Voltooid' : amount + ' / ' + mission.target));
+      if (!done && amount >= mission.target) {
+        card.appendChild(button('Pak ' + mission.reward + ' 🪙', function () {
+          if (wallet.missions[mission.id] || mission.progress(player) < mission.target) return;
+          wallet.missions[mission.id] = 1;
+          Store.save();
+          App.syncSoon();
+          Snd.fx('done');
+          App.toast('+' + mission.reward + ' munten');
+          Mine.adventure();
+        }, 'primary'));
+      } else if (!done || mission.route !== 'home') {
+        card.appendChild(button(mission.route === 'home' ? 'Naar het leerpad' : done ? 'Speel opnieuw' : 'Start missie', function () {
+          if (mission.route === 'home') App.go('home');
+          else App.go('adventure', { route: mission.route });
+        }));
+      }
+      list.appendChild(card);
+    });
+    room.appendChild(list);
+  };
+
+  function play(player, room, id) {
+    var route = routes[id];
     var order = U.shuffle(cards);
     var index = 0;
     var earned = 0;
 
     function round() {
       U.clear(room);
-      room.appendChild(h('header.sub-top', button('← Mijn', function () { Snd.stop(); Mine.show(); App.syncSoon(); }), h('h2', 'Bouw de brug')));
-      var bridge = h('div.mine-bridge', { 'aria-label': index + ' van 6 brugdelen gelegd' });
+      room.appendChild(h('header.sub-top', button('← Missies', function () { App.go('adventure'); App.syncSoon(); }), h('h2', route.title)));
+      var bridge = h('div.mine-bridge.route-' + route.className, { 'aria-label': index + ' van 6 opdrachten klaar' });
       for (var i = 0; i < order.length; i++) bridge.appendChild(h('span' + (i < index ? '.laid' : ''), ''));
       room.appendChild(bridge);
       if (index >= order.length) {
-        room.appendChild(h('h3', 'Je bent aan de overkant!'));
+        room.appendChild(h('h3', id === 'bridge' ? 'Je bent aan de overkant!' : id === 'gate' ? 'De poort is open!' : 'Je staat boven op de toren!'));
         room.appendChild(h('p', '+' + earned + ' munten · ' + Mine.balance(player) + ' gespaard'));
-        room.appendChild(button('Naar mijn kaarten', Mine.show, 'primary'));
+        room.appendChild(button('Naar de missies', function () { App.go('adventure'); }, 'primary'));
         App.syncSoon();
         return;
       }
@@ -191,28 +301,31 @@
       var mistake = false;
       var answered = false;
       var audio = function () { Snd.play(correct.audio); };
-      room.appendChild(h('p', 'Luister en kies de juiste tekening om een brugdeel te leggen.'));
-      room.appendChild(button('🔊 Luister', audio, 'primary'));
+      room.appendChild(h('p', route.clue));
+      if (id === 'gate') room.appendChild(h('p.route-hanzi.hz', { lang: 'zh-CN' }, correct.hz));
+      else room.appendChild(button('🔊 Luister', audio, 'primary'));
       var options = h('div.mine-album');
       var feedback = h('p.mine-feedback', { role: 'status' });
-      U.shuffle([correct].concat(U.shuffle(cards.filter(function (card) { return card !== correct; })).slice(0, 2))).forEach(function (card) {
+      U.shuffle([correct].concat(U.shuffle(cards.filter(function (card) { return card !== correct; })).slice(0, route.choices - 1))).forEach(function (card) {
         var choice = h('button.mine-card', { type: 'button', onclick: function () {
           if (answered) return;
           if (card !== correct) {
             mistake = true;
             choice.disabled = true;
             Snd.fx('oops');
-            feedback.textContent = 'Luister nog eens. Je mag opnieuw kiezen.';
+            feedback.textContent = id === 'gate' ? 'Kijk nog eens. Je mag opnieuw kiezen.' : 'Luister nog eens. Je mag opnieuw kiezen.';
             return;
           }
           answered = true;
           Mine.earn(player);
           earned += 1;
-          if (!mistake) {
+          data(player).trailDays[U.dayKey()] = 1;
+          if (!mistake && id === 'bridge') {
             var practice = data(player).practice;
             if (!practice[card.id]) practice[card.id] = {};
             practice[card.id][U.dayKey()] = 1;
           }
+          if (index + 1 === order.length) data(player).runs[id] = 1;
           Store.save();
           Snd.fx('good');
           feedback.textContent = '+1 munt · ' + card.hz + ' ' + card.py;
@@ -221,12 +334,14 @@
           setTimeout(function () {
             if (feedback.parentNode === room && room.isConnected) round();
           }, 900);
-        } }, picture(card), h('span', card.word));
+        } }, id === 'tower' ? h('span.route-hanzi.hz', { lang: 'zh-CN' }, card.hz) :
+          h('span.wardrobe-icon', { 'aria-hidden': 'true' }, symbols[card.id]),
+          id === 'tower' ? null : h('span', card.word));
         options.appendChild(choice);
       });
       room.appendChild(options);
       room.appendChild(feedback);
-      audio();
+      if (id !== 'gate') audio();
     }
 
     Snd.unlock();

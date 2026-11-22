@@ -205,6 +205,8 @@
     album.addEventListener('click', function () { App.go('album'); });
     acts.appendChild(practice); acts.appendChild(tones); acts.appendChild(album);
     side.appendChild(acts);
+    side.appendChild(h('button.mine-entry.adventure-entry', { type: 'button', onclick: function () { App.go('adventure'); } },
+      h('strong', '🐉 Drakenexpeditie'), h('span', 'Missies en beloningen')));
     side.appendChild(h('button.mine-entry', { type: 'button', onclick: function () { App.go('mine'); } },
       h('strong', '⛏ Blokkenmijn'), h('span', Mine.label(p))));
     side.appendChild(h('button.mine-entry', { type: 'button', onclick: function () { App.go('wardrobe'); } },
