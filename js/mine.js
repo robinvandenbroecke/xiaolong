@@ -56,9 +56,27 @@
     { id: 'draak', name: 'Mijnendraak', hz: '龙', py: 'lóng', word: 'draak', audio: 'long-h.mp3', sky: '#c3edc4', palette: ['#28474a','#329878','#78d49c','#ffdb68'], art: ['.3......3.','.13333331.','1333333331','1303333031','1334444331','.14444441.','..112211..','2112222112','1224444221','..11..11..'] }
   ];
 
+  var discoveries = [
+    { id: 'river', subject: 'Aardrijkskunde', title: 'Waar gaat de rivier heen?', icon: '🌊',
+      word: '水', py: 'shuǐ', nl: 'water', audio: 'shui-h.mp3',
+      scene: 'Xiǎolóng laat een papieren bootje los. “Waar zou het water heen stromen?” vraagt de panda.',
+      fact: 'De Jangtse is de langste rivier van Azië. Bij Shanghai stroomt ze de Oost-Chinese Zee in.',
+      ask: 'Waar komt het rivierwater uiteindelijk terecht?', answers: ['In de zee', 'Op een bergtop', 'In een tunnel'], correct: 0 },
+    { id: 'wall', subject: 'Geschiedenis', title: 'De muur met veel bouwers', icon: '🧱',
+      word: '长城', py: 'Chángchéng', nl: 'de Chinese Muur', audio: 'st_changcheng-a.mp3',
+      scene: 'De panda stapelt blokken over een bergrug. “Dit lukt nooit in één dag!” lacht Xiǎolóng.',
+      fact: 'Verschillende Chinese dynastieën bouwden en herbouwden delen van de Chinese Muur. Sommige delen zijn van aangestampte aarde, andere van steen of baksteen.',
+      ask: 'Hoe is de Chinese Muur ontstaan?', answers: ['Alles werd in één keer gebouwd', 'Bouwers werkten eraan in verschillende tijden', 'De wind maakte de muur'], correct: 1 },
+    { id: 'festival', subject: 'Cultuur', title: 'Samen aan tafel met Nieuwjaar', icon: '🥟',
+      word: '饺子', py: 'jiǎozi', nl: 'dumplings', audio: 'st_jiaozi-h.mp3',
+      scene: 'Bij oma vouwt Xiǎolóng deeg rond de vulling. Zijn eerste dumpling ziet eruit als een bootje.',
+      fact: 'Met Chinees Nieuwjaar komen veel families samen. In delen van Noord-China eten ze bij het feest vaak jiǎozi. Gewoontes verschillen per streek.',
+      ask: 'Wat vouwt Xiǎolóng met oma?', answers: ['Een lantaarn', 'Een muts', 'Een dumpling'], correct: 2 }
+  ];
+
   function data(player) {
     if (!player.mine) player.mine = {};
-    ['earned', 'spent', 'cards', 'practice', 'gear', 'missions', 'runs', 'trailDays'].forEach(function (key) {
+    ['earned', 'spent', 'cards', 'practice', 'gear', 'missions', 'runs', 'trailDays', 'discoveries'].forEach(function (key) {
       if (!player.mine[key]) player.mine[key] = {};
     });
     return player.mine;
@@ -77,7 +95,8 @@
     var bonus = missions.reduce(function (total, mission) {
       return total + (wallet.missions[mission.id] ? mission.reward : 0);
     }, 0);
-    return Math.max(0, sum(wallet.earned) + bonus - sum(wallet.spent));
+    var explorer = discoveries.filter(function (entry) { return !!wallet.discoveries[entry.id]; }).length;
+    return Math.max(0, sum(wallet.earned) + bonus + explorer * 2 - sum(wallet.spent));
   };
 
   function increment(map, amount) {
@@ -241,7 +260,8 @@
       h('div', h('strong', rank), h('p', claimed + ' van ' + missions.length + ' missies · ' + Mine.balance(player) + ' 🪙'))));
     room.appendChild(h('div.row',
       button('Drakengarderobe', function () { App.go('wardrobe'); }),
-      button('Kaarten & pakjes', function () { App.go('mine'); })));
+      button('Kaarten & pakjes', function () { App.go('mine'); }),
+      button('🧭 Ontdek China', function () { App.go('china'); })));
     var training = h('details.box', h('summary', 'Beluister de zes woorden'));
     var previews = h('div.adventure-words');
     cards.forEach(function (card) {
@@ -273,6 +293,62 @@
           else App.go('adventure', { route: mission.route });
         }));
       }
+      list.appendChild(card);
+    });
+    room.appendChild(list);
+  };
+
+  Mine.china = function () {
+    var player = Store.current();
+    if (!player) { App.go('chooser'); return; }
+    var found = data(player).discoveries;
+    var room = h('section.mine-room.adventure-room');
+    U.clear(U.$('#app')).appendChild(room);
+    room.appendChild(h('header.sub-top', button('← Missies', function () { App.go('adventure'); App.syncSoon(); }), h('h2', 'Ontdek China')));
+    var progress = h('p.mine-balance', { role: 'status' });
+    function report() {
+      var n = discoveries.filter(function (entry) { return !!found[entry.id]; }).length;
+      progress.textContent = n + ' van ' + discoveries.length + ' ontdekt · ' + Mine.balance(player) + ' 🪙';
+    }
+    report();
+    room.appendChild(progress);
+    var list = h('div.adventure-list');
+    discoveries.forEach(function (entry) {
+      var card = h('details.adventure-card',
+        h('summary', entry.icon + ' ' + entry.title),
+        h('p.small', entry.subject),
+        h('p', entry.scene), h('p', entry.fact));
+      var word = h('p', h('span.hz', { lang: 'zh-CN' }, entry.word), ' · ' + entry.py + ' · ' + entry.nl);
+      card.appendChild(word);
+      card.appendChild(button('🔊 Luister naar het woord', function () { Snd.play(entry.audio); }));
+      card.appendChild(h('p', h('strong', entry.ask)));
+      var answers = h('div.china-answers');
+      var feedback = h('p.small', { role: 'status' }, found[entry.id] ? '✓ Al ontdekt' : '');
+      var solved = false;
+      entry.answers.forEach(function (label, index) {
+        var answer = button(label, function () {
+          if (solved) return;
+          if (index !== entry.correct) {
+            answer.disabled = true;
+            feedback.textContent = 'Lees het weetje nog eens en probeer opnieuw.';
+            return;
+          }
+          solved = true;
+          U.$$('button', answers).forEach(function (choice) { choice.disabled = true; });
+          var first = !found[entry.id];
+          if (first) {
+            found[entry.id] = 1;
+            Store.save();
+            App.syncSoon();
+            report();
+          }
+          feedback.textContent = first ? '✓ Juist! +2 munten.' : '✓ Juist!';
+          Snd.fx('good');
+        });
+        answers.appendChild(answer);
+      });
+      card.appendChild(answers);
+      card.appendChild(feedback);
       list.appendChild(card);
     });
     room.appendChild(list);

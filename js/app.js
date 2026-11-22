@@ -13,7 +13,7 @@
     document.body.dataset.screen = name;
     var fn = {
       chooser: Screens.chooser, newplayer: Screens.newplayer, home: Screens.home, path: Screens.path, album: Screens.album,
-      mine: Mine.show, adventure: Mine.adventure, wardrobe: Mine.wardrobe, hongbao: Screens.hongbao, story: Screens.story, parent: Parent.show
+      mine: Mine.show, adventure: Mine.adventure, china: Mine.china, wardrobe: Mine.wardrobe, hongbao: Screens.hongbao, story: Screens.story, parent: Parent.show
     }[name];
     if (fn) fn(opts);
     reloadIfReady();

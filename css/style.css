@@ -720,3 +720,9 @@ html.eink .wday:not(.on) .wl, html.eink .fam-l:not(.on) { opacity: .58; }
 }
 html.eink .lesson-overview, html.eink .lesson-step { border-width: 2px; }
 html.eink .lesson-step-locked { background: #faf7ed; }
+
+details.adventure-card { display: block; }
+details.adventure-card > summary { cursor: pointer; font-family: var(--f-ui); font-weight: 600; min-height: 44px; align-content: center; }
+details.adventure-card > :not(summary) { margin-block: .55rem; }
+.china-answers { display: grid; gap: .4rem; }
+.china-answers .btn { text-align: left; min-height: 44px; }
