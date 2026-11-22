@@ -607,19 +607,9 @@
     var more = h('div.intro-more.later');
     if (it.k !== 'z' && (it.em || it.sw)) more.appendChild(picture(it, true));
     more.appendChild(h('p.intro-nl', it.nl));
-    var voices = Snd.voices(it);
-    var voice = 0;
-    var selected = function () { return voices[voice]; };
-    var listen = speakerBtn(selected, { big: true });
-    var tools = h('div.intro-tools', listen, slowBtn(selected));
-    if (voices.length > 1) {
-      var another = h('button.btn.ghost.small', { type: 'button' }, 'Andere stem');
-      another.addEventListener('click', function () {
-        voice = (voice + 1) % voices.length;
-        listen.click();
-      });
-      tools.appendChild(another);
-    }
+    var file = au(it, 'any');
+    var listen = speakerBtn(function () { file = au(it, 'any'); return file; }, { big: true });
+    var tools = h('div.intro-tools', listen, slowBtn(function () { return file; }));
     card.appendChild(tools);
     card.appendChild(more);
     if (it.tk) card.appendChild(h('div.tk.later', h('span.tk-ic', '💡'), h('span', it.tk)));
@@ -640,7 +630,7 @@
     row.appendChild(go);
     api.main.appendChild(row);
     // eerst het teken en de klank, dan pas pinyin en betekenis (zo kijkt het kind naar het teken)
-    Snd.play(au(it)).then(function () { return U.wait(200); }).then(function () {
+    Snd.play(file).then(function () { return U.wait(200); }).then(function () {
       U.$$('rt', hzEl).forEach(function (r) { r.classList.remove('hide'); });
       U.$$('.later', card).forEach(function (x) { x.classList.add('shown'); });
     });

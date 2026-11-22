@@ -14,7 +14,7 @@
     return it.syl.map(function (s) { return s.c + ':' + s.m; }).join(' ');
   }
 
-  Snd.voices = function (it) {
+  function voicesFor(it) {
     if (!it || !it.au || !it.au.length) return [];
     if (!storyVoices) {
       storyVoices = {};
@@ -31,10 +31,10 @@
     }
     var voices = storyVoices[pronunciationKey(it)] || {};
     return it.au.concat(Object.keys(voices).map(function (who) { return voices[who]; }));
-  };
+  }
 
   Snd.nextVoice = function (it) {
-    var files = Snd.voices(it);
+    var files = voicesFor(it);
     if (!files.length) return null;
     var i = nextVoice[it.id] || 0;
     nextVoice[it.id] = (i + 1) % files.length;

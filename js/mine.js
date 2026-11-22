@@ -48,12 +48,12 @@
   };
   var symbols = { hout: '🪵', vuur: '🔥', water: '💧', berg: '⛰️', zon: '☀️', draak: '🐉' };
   var cards = [
-    { id: 'hout', name: 'Takbever', hz: '木', py: 'mù', word: 'hout', audio: 'mu-h.mp3', sky: '#f4ce8e', palette: ['#643c2c','#a66a46','#f4d198','#fff1ce'], art: ['..........','.11....11.','.12222221.','1222222221','1202222021','1223333221','.13300331.','..344443..','...1111...','..11..11..'] },
-    { id: 'vuur', name: 'Vonkvos', hz: '火', py: 'huǒ', word: 'vuur', audio: 'huo-h.mp3', sky: '#ffcb9d', palette: ['#6d2532','#ec6939','#ffc34e','#fff0cc'], art: ['..........','1........1','12......21','123....321','1222222221','.12222221.','.13022031.','..134431..','....11....','..........'] },
-    { id: 'water', name: 'Spatvis', hz: '水', py: 'shuǐ', word: 'water', audio: 'shui-h.mp3', sky: '#a5e9ef', palette: ['#174d7a','#2e98c6','#6be3ec','#fff4ac'], art: ['......4...','..332...4.','.322322...','32222221.1','3222222311','3230222321','3222222311','.3222221.1','..33331...','..........'] },
-    { id: 'berg', name: 'Bergbok', hz: '山', py: 'shān', word: 'berg', audio: 'shan-h.mp3', sky: '#bdd2fa', palette: ['#31374f','#797d99','#dbe4ec','#98cba2'], art: ['.2......2.','.3......3.','.33....33.','..333333..','.23333332.','.23033032.','..333333..','...3113...','....33....','44......44'] },
-    { id: 'zon', name: 'Zonnebij', hz: '日', py: 'rì', word: 'zon', audio: 'ri-h.mp3', sky: '#fff0ac', palette: ['#614514','#f5a72e','#ffe36b','#fff9e2'], art: ['.4......4.','444....444','.44333344.','..333333..','.33033033.','.33233233.','.11111111.','..222222..','...1111...','..........'] },
-    { id: 'draak', name: 'Mijnendraak', hz: '龙', py: 'lóng', word: 'draak', audio: 'long-h.mp3', sky: '#c3edc4', palette: ['#28474a','#329878','#78d49c','#ffdb68'], art: ['.3......3.','.13333331.','1333333331','1303333031','1334444331','.14444441.','..112211..','2112222112','1224444221','..11..11..'] }
+    { id: 'hout', name: 'Takbever', hz: '木', py: 'mù', word: 'hout', item: 'mu4', sky: '#f4ce8e', palette: ['#643c2c','#a66a46','#f4d198','#fff1ce'], art: ['..........','.11....11.','.12222221.','1222222221','1202222021','1223333221','.13300331.','..344443..','...1111...','..11..11..'] },
+    { id: 'vuur', name: 'Vonkvos', hz: '火', py: 'huǒ', word: 'vuur', item: 'huo', sky: '#ffcb9d', palette: ['#6d2532','#ec6939','#ffc34e','#fff0cc'], art: ['..........','1........1','12......21','123....321','1222222221','.12222221.','.13022031.','..134431..','....11....','..........'] },
+    { id: 'water', name: 'Spatvis', hz: '水', py: 'shuǐ', word: 'water', item: 'shui', sky: '#a5e9ef', palette: ['#174d7a','#2e98c6','#6be3ec','#fff4ac'], art: ['......4...','..332...4.','.322322...','32222221.1','3222222311','3230222321','3222222311','.3222221.1','..33331...','..........'] },
+    { id: 'berg', name: 'Bergbok', hz: '山', py: 'shān', word: 'berg', item: 'shan', sky: '#bdd2fa', palette: ['#31374f','#797d99','#dbe4ec','#98cba2'], art: ['.2......2.','.3......3.','.33....33.','..333333..','.23333332.','.23033032.','..333333..','...3113...','....33....','44......44'] },
+    { id: 'zon', name: 'Zonnebij', hz: '日', py: 'rì', word: 'zon', item: 'ri', sky: '#fff0ac', palette: ['#614514','#f5a72e','#ffe36b','#fff9e2'], art: ['.4......4.','444....444','.44333344.','..333333..','.33033033.','.33233233.','.11111111.','..222222..','...1111...','..........'] },
+    { id: 'draak', name: 'Mijnendraak', hz: '龙', py: 'lóng', word: 'draak', item: 'long', sky: '#c3edc4', palette: ['#28474a','#329878','#78d49c','#ffdb68'], art: ['.3......3.','.13333331.','1333333331','1303333031','1334444331','.14444441.','..112211..','2112222112','1224444221','..11..11..'] }
   ];
 
   var discoveries = [
@@ -146,7 +146,7 @@
   function reveal(player, card, message) {
     var body = h('div.mine-reveal', h('h2', message), picture(card), h('h3', card.name),
       h('p', h('span.hz', { lang: 'zh-CN' }, card.hz), ' · ', card.py, ' · ', card.word),
-      button('🔊 Luister', function () { Snd.play(card.audio); }));
+      button('🔊 Luister', function () { Snd.play(Snd.nextVoice(CONTENT.items[card.item])); }));
     if (gold(player, card)) body.appendChild(h('p', '✦ Gouden kaart'));
     App.modal(body);
   }
@@ -269,7 +269,7 @@
     var previews = h('div.adventure-words');
     cards.forEach(function (card) {
       previews.appendChild(button(symbols[card.id] + ' ' + card.word + ' · ' + card.hz,
-        function () { Snd.play(card.audio); }));
+        function () { Snd.play(Snd.nextVoice(CONTENT.items[card.item])); }));
     });
     training.appendChild(previews);
     room.appendChild(training);
@@ -379,7 +379,8 @@
       var correct = order[index];
       var mistake = false;
       var answered = false;
-      var audio = function () { Snd.play(correct.audio); };
+      var file = id === 'gate' ? null : Snd.nextVoice(CONTENT.items[correct.item]);
+      var audio = function () { Snd.play(file); };
       room.appendChild(h('p', route.clue));
       if (id === 'gate') room.appendChild(h('p.route-hanzi.hz', { lang: 'zh-CN' }, correct.hz));
       else room.appendChild(button('🔊 Luister', audio, 'primary'));
