@@ -48,7 +48,11 @@
       grid.appendChild(b);
     });
     var add = h('button.who-tile.add', { type: 'button' }, h('span.who-plus', '+'), h('span.who-name', 'Nieuwe speler'));
-    add.addEventListener('click', function () { Snd.unlock(); App.go('newplayer'); });
+    add.addEventListener('click', function () {
+      Snd.unlock();
+      if (Family.active()) App.parentGate().then(function (ok) { if (ok) App.go('parent', { tab: 'sync' }); });
+      else App.go('newplayer');
+    });
     grid.appendChild(add);
     wrap.appendChild(grid);
     var foot = h('div.foot-links');
@@ -63,6 +67,8 @@
   Scr.newplayer = function (opts) {
     opts = opts || {};
     var edit = opts.player || null;
+    if (!edit && Family.active()) { App.go('parent', { tab: 'sync' }); return; }
+    var shared = edit && Store.familyPlayer(edit.id);
     var root = app();
     var chosen = edit ? edit.prof.color : Store.COLORS[Math.floor(Math.random() * Store.COLORS.length)].id;
     var wrap = h('div.newplayer');
@@ -74,7 +80,7 @@
     }
     wrap.appendChild(preview);
     var name = h('input.np-name', { type: 'text', maxlength: '20', placeholder: 'Je naam', value: edit ? edit.prof.name : '', autocomplete: 'off' });
-    wrap.appendChild(h('label.np-lbl', 'Hoe heet je?', name));
+    wrap.appendChild(shared ? h('p.np-lbl', edit.prof.name) : h('label.np-lbl', 'Hoe heet je?', name));
     var colors = h('div.np-colors');
     Store.COLORS.forEach(function (c) {
       var b = h('button.np-color', { type: 'button', 'aria-label': c.nl, style: { background: c.main } });
@@ -95,13 +101,13 @@
     ok.addEventListener('click', function () {
       var n = name.value.trim();
       if (!n) { name.focus(); name.classList.add('shake'); setTimeout(function () { name.classList.remove('shake'); }, 400); return; }
-      if (edit) { Store.editPlayer(edit, { name: n, color: chosen }); App.go(opts.back || 'parent'); }
+      if (edit) { Store.editPlayer(edit, shared ? { color: chosen } : { name: n, color: chosen }); App.go(opts.back || 'parent'); }
       else { Store.addPlayer(n, chosen); App.go('home'); }
       App.syncSoon();
     });
     row.appendChild(back); row.appendChild(ok);
     wrap.appendChild(row);
-    if (!edit && !Family.used()) {
+    if (!edit && !Family.active()) {
       wrap.appendChild(h('button.btn.ghost', { type: 'button', onclick: function () {
         App.parentGate().then(function (ok) { if (ok) App.go('parent', { tab: 'sync' }); });
       } }, 'Ik heb al een gezinsaccount'));

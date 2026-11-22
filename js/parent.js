@@ -98,7 +98,10 @@
       pick.appendChild(b);
     });
     var add = h('button.seg-b', { type: 'button' }, '+ speler');
-    add.addEventListener('click', function () { App.go('newplayer', { back: 'parent' }); });
+    add.addEventListener('click', function () {
+      if (Family.active()) App.go('parent', { tab: 'sync' });
+      else App.go('newplayer', { back: 'parent' });
+    });
     pick.appendChild(add);
     body.appendChild(pick);
     var p = Store.player(selected);
@@ -122,7 +125,8 @@
     var advanced = h('details.box.parent-details', h('summary', 'Geavanceerd'));
     choice('Alle lessen open', 'Voor spelers die lessen willen overslaan.', 'unlockAll', [[false, 'nee'], [true, 'ja']], advanced);
     var row = h('div.row');
-    var edit = h('button.btn.ghost', { type: 'button' }, 'Naam of kleur wijzigen');
+    var shared = Store.familyPlayer(p.id);
+    var edit = h('button.btn.ghost', { type: 'button' }, shared ? 'Kleur wijzigen' : 'Naam of kleur wijzigen');
     edit.addEventListener('click', function () { App.go('newplayer', { player: p, back: 'parent' }); });
     var del = h('button.btn.danger', { type: 'button' }, 'Speler verwijderen');
     del.addEventListener('click', function () {
@@ -132,8 +136,10 @@
       });
     });
     body.appendChild(h('div.row', edit));
-    row.appendChild(del);
-    advanced.appendChild(row);
+    if (!shared) {
+      row.appendChild(del);
+      advanced.appendChild(row);
+    }
     body.appendChild(advanced);
   }
 

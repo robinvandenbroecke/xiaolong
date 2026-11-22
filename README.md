@@ -53,7 +53,7 @@ De namen van de kinderen staan nergens in de bestanden; ze worden in de app zelf
 
 ## Synchroniseren met het gezinsaccount
 
-Open **Ouderhoek → Synchroniseren → Gezinsaccount** en meld aan met het e-mailadres en wachtwoord van Tafelberg of RekenRinkel. Kies een gezinsprofiel om er een draak voor te maken. Xiǎolóng bewaart zijn eigen voortgang per account. Meld op andere toestellen aan met hetzelfde account.
+Open **Ouderhoek → Account** en meld aan met het e-mailadres en wachtwoord van Tafelberg of RekenRinkel. Gezinsleden verschijnen automatisch bij **Wie speelt er?**. Beheer de gedeelde namen en gezinsleden in Tafelberg of RekenRinkel. Xiǎolóng bewaart de Chinese voortgang per speler. Meld op andere toestellen aan met hetzelfde account.
 
 Met **Lokale voortgang kopiëren** kun je een Xiǎolóng-speler van dit toestel meenemen. Kies eventueel het bestaande gezinsprofiel van hetzelfde kind. De oorspronkelijke voortgang blijft beschikbaar wanneer je afmeldt. Had je Google Sheets gekoppeld? Synchroniseer eerst als lokale speler en kopieer daarna de voortgang die je wilt meenemen.
 

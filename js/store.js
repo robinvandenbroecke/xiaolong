@@ -83,13 +83,25 @@
   S.setCurrent = function (id) { state.device.lastPlayer = id; S.save(); };
   S.mergePlayers = function (incoming) {
     var current = Object.keys(state.players).map(function (id) { return state.players[id]; });
-    var merged = XLMerge.mergePlayers(current, incoming);
+    return S.replacePlayers(XLMerge.mergePlayers(current, incoming));
+  };
+  S.replacePlayers = function (players, aliases) {
     var next = {};
-    merged.forEach(function (p) { next[p.id] = fixPlayer(p); });
-    if (XLMerge.same(state.players, next)) return false;
+    players.forEach(function (p) { next[p.id] = fixPlayer(p); });
+    var previous = state.device.lastPlayer;
+    var selected = aliases && aliases[previous] || previous;
+    if (selected === previous && XLMerge.same(state.players, next)) return false;
     state.players = next;
+    state.device.lastPlayer = selected;
     S.save();
     return true;
+  };
+  S.familyPlayer = function (id) { return /^family-p[a-zA-Z0-9]{1,100}$/.test(id); };
+  S.newFamilyPlayer = function (id, name, created) {
+    return fixPlayer({
+      id: id, v: 1, prof: { name: name, color: 'rood', c: created, t: 0 },
+      ability: { L: {}, H: {}, P: {}, T: {}, S: {} }, mine: {}, outfit: {}
+    });
   };
   S.localPlayers = function () {
     try {

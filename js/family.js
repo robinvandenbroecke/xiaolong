@@ -6,7 +6,7 @@
   var publishableKey = 'sb_publishable_lVYM3XzTp1LrYYyyLJxwOQ_7tNOy93T';
   var sessionKey = 'xiaolong.family.v1';
   var session;
-  var roster = [];
+  var roster;
   var busy;
 
   function readSession() {
@@ -17,7 +17,6 @@
   }
 
   Family.load = function () { session = readSession(); };
-  Family.used = function () { return !!U.storage.get('xiaolong.family.used'); };
   Family.account = function () { return session && session.account; };
   Family.active = function () { return !!session; };
 
@@ -73,17 +72,66 @@
     });
   }
 
+  function directory(result, account) {
+    if (result.account !== account || !Array.isArray(result.profiles)) throw new Error('Ongeldige gezinslijst.');
+    var players = {}, aliases = {};
+    result.profiles.forEach(function (entry) {
+      var id = 'family-' + entry.user;
+      if (!Store.familyPlayer(id) || !entry.profile || typeof entry.profile.name !== 'string' || !entry.profile.name.trim()) return;
+      players[id] = { name: entry.profile.name, created: Number(entry.profile.created) || 0 };
+      (Array.isArray(entry.merged) ? entry.merged : []).forEach(function (old) {
+        var alias = 'family-' + old;
+        if (alias !== id && Store.familyPlayer(alias)) aliases[alias] = id;
+      });
+    });
+    return { players: players, aliases: aliases };
+  }
+
+  function safeToApply() {
+    return ['lesson', 'story', 'mine', 'wardrobe', 'adventure', 'china', 'newplayer'].indexOf(App.screen()) === -1;
+  }
+
+  function familyProgress(local, remote) {
+    if (!roster) return XLMerge.mergePlayers(local, remote);
+    function canonical(list) {
+      return list.reduce(function (out, player) {
+        if (!player || !player.id) return out;
+        var id = roster.aliases[player.id] || player.id;
+        // Een oude lokale verwijdering mag een actief gezinslid niet verbergen.
+        if (!roster.players[id] || !player.del) out.push(Object.assign({}, player, { id: id }));
+        return out;
+      }, []);
+    }
+    var players = XLMerge.mergePlayers(canonical(local), canonical(remote));
+    var present = {};
+    players.forEach(function (player) {
+      var entry = roster.players[player.id];
+      if (!entry) return;
+      player.prof = Object.assign({}, player.prof || Store.newFamilyPlayer(player.id, entry.name, entry.created).prof, { name: entry.name });
+      present[player.id] = true;
+    });
+    Object.keys(roster.players).forEach(function (id) {
+      var entry = roster.players[id];
+      if (!present[id]) players.push(Store.newFamilyPlayer(id, entry.name, entry.created));
+    });
+    return players.sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
+  }
+
+  function applyPlayers(players) {
+    return safeToApply() && Store.replacePlayers(players, roster && roster.aliases);
+  }
+
   function syncProgress(token, state, account, tries) {
     var filter = '?owner_id=eq.' + account;
     return progress(token, 'GET', filter + '&select=players,revision', null).then(function (result) {
-      if (!result.ok) throw new Error('Online voortgang ophalen lukt niet.');
       if (state !== Store.state()) return false;
+      if (!result.ok) throw new Error('Online voortgang ophalen lukt niet.');
       var row = result.data[0];
       var remote = row ? row.players : [];
-      // Laat het actieve lesobject intact tot de les klaar is.
       var current = Object.keys(state.players).map(function (id) { return state.players[id]; });
-      var players = XLMerge.mergePlayers(current, remote);
-      var changed = App.screen() !== 'lesson' && App.screen() !== 'mine' && App.screen() !== 'wardrobe' && App.screen() !== 'adventure' && App.screen() !== 'china' && Store.mergePlayers(remote);
+      var players = familyProgress(current, remote);
+      if (!safeToApply()) return false;
+      var changed = applyPlayers(players);
       if (XLMerge.same(players, remote)) return changed;
       return progress(token, row ? 'PATCH' : 'POST',
         row ? filter + '&revision=eq.' + row.revision : '',
@@ -107,16 +155,25 @@
     var state = Store.state();
     if (busy && busy.state === state) return busy.promise;
     var account = session.account;
+    var before = state.players;
     var operation = { state: state };
     busy = operation;
+    var listFailed = false;
     operation.promise = freshToken(account).then(function (token) {
-      return syncProgress(token, state, account, 0);
+      return auth({ action: 'list', token: token }).then(function (result) {
+        if (state === Store.state()) roster = directory(result, account);
+      }).catch(function () { listFailed = true; }).then(function () {
+        if (state !== Store.state() || !safeToApply()) return false;
+        return syncProgress(token, state, account, 0);
+      });
     }).then(function (changed) {
-      if (manual && state === Store.state()) App.toast('Gesynchroniseerd.');
+      if (manual && state === Store.state()) App.toast(listFailed ? 'De gezinslijst kon niet worden bijgewerkt.' : 'Gesynchroniseerd.');
       return changed;
     }).catch(function () {
-      if (manual && state === Store.state()) App.toast('Synchroniseren lukt niet. Controleer je verbinding of meld je opnieuw aan.');
-      return false;
+      if (state !== Store.state()) return false;
+      if (manual) App.toast('Synchroniseren lukt niet. Controleer je verbinding of meld je opnieuw aan.');
+      var changed = roster && applyPlayers(familyProgress(Object.keys(state.players).map(function (id) { return state.players[id]; }), []));
+      return !!changed || before !== state.players;
     }).then(function (changed) {
       if (busy === operation) busy = null;
       return changed;
@@ -126,15 +183,19 @@
 
   function switchAccount(value) {
     Store.save();
-    roster = value ? value.profiles || [] : [];
+    roster = value ? directory(value, value.account) : null;
     saveSession(value ? {
       account: value.account, email: value.email, token: value.token,
       refresh: value.refresh, expires: value.expires
     } : null);
     Store.load(Family.account());
     App.applyDevice();
-    App.go('parent', { tab: 'sync' });
-    if (value) Family.sync(true);
+    if (value) {
+      App.go('chooser');
+      applyPlayers(familyProgress(Object.keys(Store.state().players).map(function (id) { return Store.state().players[id]; }), []));
+      App.go('chooser');
+      Family.sync(false).then(App.refreshPlayers);
+    } else App.go('parent', { tab: 'sync' });
   }
 
   function button(label, click) {
@@ -144,10 +205,8 @@
   function rosterOptions() {
     var h = U.h;
     var choices = h('select', { 'aria-label': 'Gezinsprofiel' }, h('option', { value: '' }, 'Kies een gezinsprofiel'));
-    roster.forEach(function (entry) {
-      if (entry.profile && entry.profile.name && /^p[a-zA-Z0-9]{1,100}$/.test(entry.user)) {
-        choices.appendChild(h('option', { value: 'family-' + entry.user }, entry.profile.name));
-      }
+    Store.players().filter(function (p) { return Store.familyPlayer(p.id); }).forEach(function (p) {
+      choices.appendChild(h('option', { value: p.id }, p.prof.name));
     });
     return choices;
   }
@@ -162,35 +221,20 @@
       if (session.expires <= Date.now()) {
         section.appendChild(h('p.small', 'Werkt synchroniseren niet meer? Meld je af en opnieuw aan.'));
       }
-      section.appendChild(button('Nu synchroniseren', function () { Family.sync(true); }));
+      section.appendChild(h('p.small', 'Je gezinsleden verschijnen vanzelf bij ‘Wie speelt er?’.'));
+      section.appendChild(button('Nu synchroniseren', function () {
+        Family.sync(true).then(function (changed) { if (changed && section.isConnected) Parent.show(); });
+      }));
+      section.appendChild(h('p.small', h('a', { href: 'https://robinvandenbroecke.github.io/tafelberg/', target: '_blank', rel: 'noopener' }, 'Gezinsleden beheren in Tafelberg')));
       section.appendChild(button('Afmelden', function () {
         var old = session;
         switchAccount(null);
         auth({ action: 'logout', token: old.token }).catch(function () {});
       }));
-      var profiles = rosterOptions();
       var local = Store.localPlayers();
       var source = h('select', { 'aria-label': 'Lokale speler' }, h('option', { value: '' }, 'Kies een lokale speler'));
       local.forEach(function (p) { source.appendChild(h('option', { value: p.id }, p.prof.name)); });
       var target = rosterOptions();
-      section.appendChild(h('div.row', profiles, button('Gezinsprofiel gebruiken', function () {
-        if (!profiles.value) return;
-        var player = Store.state().players[profiles.value];
-        if (player && player.del) { App.toast('Dit Xiǎolóng-profiel is verwijderd.'); return; }
-        if (!player) Store.addPlayer(profiles.options[profiles.selectedIndex].text.slice(0, 20), 'rood', profiles.value);
-        Store.setCurrent(profiles.value);
-        App.go('home');
-        App.syncSoon();
-      })));
-      section.appendChild(button('Gezinsprofielen ophalen', function () {
-        var account = Family.account();
-        freshToken(account).then(function (token) { return auth({ action: 'list', token: token }); })
-          .then(function (result) {
-            if (Family.account() !== account) return;
-            roster = result.profiles || [];
-            if (App.screen() === 'parent' && section.isConnected) App.go('parent', { tab: 'sync' });
-          }).catch(function () { App.toast('Gezinsprofielen ophalen lukt niet.'); });
-      }));
       if (local.length) {
         section.appendChild(h('p.small', 'Kopieer een speler van dit toestel. Kies eventueel hetzelfde kind in het gezinsaccount.'));
         section.appendChild(h('div.row', source, target, button('Lokale voortgang kopiëren', function () {
@@ -205,6 +249,7 @@
             if (!ok || captured !== Store.state()) return;
             var copy = JSON.parse(JSON.stringify(player));
             copy.id = id;
+            if (target.value && existing) copy.prof.name = existing.prof.name;
             Store.mergePlayers([copy]);
             if (Store.save()) Family.sync(true);
             else App.toast('Bewaren op dit toestel lukt niet.');
@@ -225,7 +270,6 @@
           if (!/^[0-9a-f-]{36}$/.test(value.account) || !value.token || !value.refresh) {
             throw new Error('Het account kon niet worden geopend.');
           }
-          U.storage.set('xiaolong.family.used', '1');
           switchAccount(value);
         }).catch(function (error) {
           status.textContent = error.message || 'Aanmelden lukt niet.';

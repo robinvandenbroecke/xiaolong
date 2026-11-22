@@ -151,9 +151,12 @@
 
   /* ---- synchroniseren ---- */
   var syncTimer = null;
+  App.refreshPlayers = function (changed) {
+    if (changed && (current === 'chooser' || current === 'home')) App.go(current);
+  };
   App.syncSoon = function () {
     clearTimeout(syncTimer);
-    syncTimer = setTimeout(function () { Sync.now(false); }, 1500);
+    syncTimer = setTimeout(function () { Sync.now(false).then(App.refreshPlayers); }, 1500);
   };
 
   /* ---- e-ink ---- */
@@ -299,18 +302,23 @@
     Store.onChange(function () { var el = document.getElementById('syncIcon'); if (el) el.textContent = Sync.icon(); });
     document.addEventListener('pointerdown', function once() { Snd.unlock(); document.removeEventListener('pointerdown', once); });
     var p = Store.current();
-    if (Store.players().length === 0) App.go('newplayer');
+    if (Store.players().length === 0) App.go(Family.active() ? 'chooser' : 'newplayer');
     else if (Store.players().length === 1 && p) App.go('home');
     else App.go('chooser');
     Sync.now(false).then(function (changed) {
-      if (changed && (current === 'chooser' || current === 'home' || (current === 'newplayer' && Store.players().length))) App.go(current === 'newplayer' ? 'chooser' : current);
+      if (changed && !Family.active() && current === 'newplayer' && Store.players().length) App.go('chooser');
+      else App.refreshPlayers(changed);
     });
     window.addEventListener('online', App.syncSoon);
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') Sync.now(false).then(function (changed) {
-        if (changed && (current === 'chooser' || current === 'home' || (current === 'newplayer' && Store.players().length))) App.go(current === 'newplayer' ? 'chooser' : current);
+        if (changed && !Family.active() && current === 'newplayer' && Store.players().length) App.go('chooser');
+        else App.refreshPlayers(changed);
       });
     });
+    setInterval(function () {
+      if (Family.active() && current === 'chooser' && document.visibilityState === 'visible') App.syncSoon();
+    }, 60000);
     startUpdates();
   };
 
