@@ -281,9 +281,8 @@ p { margin: 0 0 .6em; }
 .ex-q { font-family: var(--f-ui); font-weight: 600; font-size: 1.25rem; text-align: center; margin: 8px 0 12px; }
 .ex-hint { text-align: center; color: var(--ink-2); }
 .ex-listen { display: flex; align-items: center; gap: 12px; margin: 6px 0 18px; flex-wrap: wrap; justify-content: center; }
-.ex-hz, .ex-py, .ex-pic { display: flex; flex-direction: column; align-items: center; margin: 4px 0 16px; }
-.ex-sylpy .py, .ex-py .py.xl { font-size: 2.6rem; }
-.ex-hzsmall .hz { font-size: 2rem; }
+.ex-hz, .ex-pic { display: flex; flex-direction: column; align-items: center; margin: 4px 0 16px; }
+.ex-sylpy .py { font-size: 2.6rem; }
 .speaker {
   width: 64px; height: 64px; border-radius: 50%; border: 0; background: var(--pc); color: #fff; padding: 14px;
   box-shadow: 0 4px 0 rgba(0,0,0,.25);
@@ -324,7 +323,6 @@ p { margin: 0 0 .6em; }
 .swatch.big { width: 96px; height: 96px; }
 .lbl { font-size: .95rem; color: var(--ink-2); text-align: center; line-height: 1.2; }
 .nlc .lbl { font-size: 1.1rem; color: var(--ink); font-weight: 700; }
-.pyc .py { font-size: 1.7rem; }
 .tonec .lbl { font-family: var(--f-ui); }
 .tone-ic { color: var(--ink); }
 @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
@@ -361,13 +359,6 @@ p { margin: 0 0 .6em; }
 .swipe-guide { position: absolute; left: 10px; top: 8px; bottom: 8px; display: flex; flex-direction: column; justify-content: space-between; font-size: .75rem; color: var(--ink-2); pointer-events: none; }
 
 /* pinyin bouwen */
-.pb-result { display: flex; gap: 2px; font-size: 3rem; font-family: var(--f-text); margin: 4px 0 12px; }
-.pb-result span { min-width: 1.2em; text-align: center; border-bottom: 3px solid var(--line); }
-.pb-rows { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 560px; margin-bottom: 14px; }
-.pb-row { display: flex; gap: 8px; align-items: center; }
-.pb-lbl { width: 54px; font-size: .85rem; color: var(--ink-2); }
-.pb-opt { flex: 1; min-height: 56px; border: 3px solid var(--line); background: var(--card); border-radius: 14px; font-size: 1.5rem; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; }
-.pb-opt.sel { border-color: var(--pc); background: #FFF0EE; }
 
 /* paren */
 .match { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; }
@@ -380,13 +371,6 @@ p { margin: 0 0 .6em; }
 .mtile.done { border-color: var(--jade); background: var(--jade-soft); opacity: .55; }
 
 /* zinnen */
-.zb-line { min-height: 78px; width: 100%; border-bottom: 3px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 0; margin-bottom: 16px; justify-content: center; }
-.zb-line.right { border-color: var(--jade); }
-.zb-line.wrong { border-color: var(--oops); }
-.zb-bank { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 18px; }
-.zb-tile { border: 3px solid var(--line); background: var(--card); border-radius: 14px; padding: 6px 12px; box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; min-width: 58px; }
-.zb-tile .hz { font-size: 1.9rem; }
-.zb-py { font-size: .8rem; color: var(--ink-2); }
 
 /* spreken */
 .mic { width: 96px; height: 96px; border-radius: 50%; border: 0; background: var(--red); color: #fff; padding: 24px; box-shadow: 0 5px 0 var(--red-dark); margin: 8px auto; display: block; }
@@ -545,7 +529,7 @@ html.eink { --paper: #FFFFFF; --card: #FFFFFF; --ink-2: #222; --line: #000; --pc
 html.eink *, html.eink *::before, html.eink *::after { animation: none !important; transition: none !important; text-shadow: none !important; }
 html.eink body { color: #000; }
 html.eink .chooser, html.eink .path, html.eink .event, html.eink .family { color: #000; background-image: none; }
-html.eink .who-tile, html.eink .choice, html.eink .act, html.eink .goal, html.eink .bubble, html.eink .chip, html.eink .mtile, html.eink .zb-tile, html.eink .pb-opt, html.eink .ti-row, html.eink .pcard, html.eink .box, html.eink .st-bubble, html.eink .tab, html.eink .ns-chip, html.eink .sticker, html.eink .slow, html.eink .swipe-pad, html.eink .contour { border: 2px solid #000; }
+html.eink .who-tile, html.eink .choice, html.eink .act, html.eink .goal, html.eink .bubble, html.eink .chip, html.eink .mtile, html.eink .ti-row, html.eink .pcard, html.eink .box, html.eink .st-bubble, html.eink .tab, html.eink .ns-chip, html.eink .sticker, html.eink .slow, html.eink .swipe-pad, html.eink .contour { border: 2px solid #000; }
 html.eink .choice.right { border-width: 5px; background: #E8E8E8; }
 html.eink .choice.wrong { border-style: dashed; }
 html.eink .unit-banner { background: #fff; border: 3px solid #000; color: #000; -webkit-mask: none; mask: none; border-radius: 14px; }
@@ -746,9 +730,5 @@ details.adventure-card > :not(summary) { margin-block: .55rem; }
 .growth-answers .btn { text-align: start; white-space: normal; }
 .growth-answers .growth-correct { border-color: var(--jade); background: var(--jade-soft); opacity: 1; }
 .growth-chinese { font-family: var(--f-hz); font-size: clamp(1.16rem, 3.8vw, 1.6rem); line-height: 1.7; overflow-wrap: anywhere; }
-.growth-writing { display: grid; gap: .35rem; }
-.growth-writing textarea, .growth-writing input { width: 100%; padding: .6rem; color: var(--ink); background: var(--paper); border: 2px solid var(--line); border-radius: .5rem; }
-.growth-writing textarea { resize: vertical; }
-.growth-speak { display: flex; align-items: center; gap: .4rem; min-height: 44px; }
 .china-answers { display: grid; gap: .4rem; }
 .china-answers .btn { text-align: left; min-height: 44px; }

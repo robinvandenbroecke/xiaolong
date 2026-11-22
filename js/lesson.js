@@ -17,9 +17,7 @@
     if (which === 'any') return Snd.nextVoice(it);
     return it.au[0];
   }
-  function singleSyl(it) { return it.syl.length === 1; }
   function toneless(it) { return it.syl.map(function (s) { return s.s; }).join(' '); }
-  function tones(it) { return it.syl.map(function (s) { return s.t; }).join(''); }
 
   /* Twee items mogen niet samen als keuze verschijnen als ze te veel op elkaar lijken. */
   function clash(a, b, mode) {
@@ -28,7 +26,6 @@
     if (a.nl === b.nl) return true;
     if (a.em && a.em === b.em) return true;
     if (mode === 'listen' && toneless(a) === toneless(b)) return true;
-    if (mode === 'pinyin' && a.py.toLowerCase() === b.py.toLowerCase()) return true;
     if (a.hz.indexOf(b.hz) >= 0 || b.hz.indexOf(a.hz) >= 0) return true; // 妈 en 妈妈
     return false;
   }
@@ -71,23 +68,6 @@
     return s.slice(0, idx) + MARKS[s[idx]][t - 1] + s.slice(idx + 1);
   }
   L.markTone = markTone;
-  var INITIALS = ['zh', 'ch', 'sh', 'b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'r', 'z', 'c', 's', 'y', 'w'];
-  function splitSyl(base) {
-    for (var i = 0; i < INITIALS.length; i++) if (base.indexOf(INITIALS[i]) === 0) return [INITIALS[i], base.slice(INITIALS[i].length)];
-    return ['', base];
-  }
-  var CONF_I = [['b', 'p'], ['d', 't'], ['g', 'k'], ['j', 'q', 'x'], ['zh', 'ch', 'sh', 'r'], ['z', 'c', 's'], ['m', 'n', 'l'], ['f', 'h'], ['y', 'w']];
-  var CONF_F = [['an', 'ang', 'en', 'eng'], ['in', 'ing'], ['ao', 'ou', 'o'], ['ai', 'ei'], ['u', 'ü', 'i'], ['iu', 'ui'], ['ian', 'iang', 'an'], ['ong', 'ou'], ['i', 'ie', 'ia'], ['uo', 'o', 'ou'], ['e', 'a', 'er'], ['un', 'ui', 'uan'], ['iao', 'ao']];
-  function similarOf(x, groups, all) {
-    var g = groups.filter(function (gr) { return gr.indexOf(x) >= 0; })[0] || [];
-    var cand = g.filter(function (y) { return y !== x; });
-    var out = U.shuffle(cand).slice(0, 1);
-    var rest = U.shuffle(all.filter(function (y) { return y !== x && out.indexOf(y) < 0; }));
-    while (out.length < 2 && rest.length) out.push(rest.pop());
-    return out;
-  }
-  var ALL_FINALS = ['a', 'o', 'e', 'i', 'u', 'ü', 'ai', 'ei', 'ao', 'ou', 'an', 'en', 'ang', 'eng', 'ong', 'ia', 'ie', 'iao', 'iu', 'ian', 'in', 'iang', 'ing', 'iong', 'ua', 'uo', 'uai', 'ui', 'uan', 'un', 'uang', 'üe', 'üan', 'ün', 'er'];
-
   /* Pinyintips voor Nederlandstaligen: letters die anders klinken dan je denkt. */
   var TIPS = [
     [/^x/, 'x klinkt als sj, zoals in sjaal.'],
@@ -181,35 +161,15 @@
   /* ---------- oefeningen samenstellen ---------- */
   function speakOk(ctx) { return ctx.player.set.speak && Voice.hasMic() && !ctx.noMic; }
 
-  function typesFor(ctx, it) {
-    var b = Store.box(ctx.player, it.id);
-    var t = [];
-    var hasPic = !!(it.em || it.sw);
-    if (it.k === 'z') {
-      t = ['zb', 'lb'];
-      if (b >= 2) t.push('zbl');
-      if (b >= 2 && speakOk(ctx)) t.push('echo');
-      return t;
-    }
-    if (b <= 1) {
-      t = hasPic ? ['lp', 'lp', 'pp'] : ['lb', 'lb'];
-      t.push('lh');
-    } else if (b === 2) {
-      t = hasPic ? ['lp', 'hp', 'pp'] : ['lb', 'hb'];
-      t.push('lh', 'tp', 'hpy');
-      if (singleSyl(it) && splitSyl(it.syl[0].s)[0]) t.push('pb');
-      if (speakOk(ctx)) t.push(hasPic ? 'speak' : 'echo');
-    } else {
-      t = hasPic ? ['hp', 'hp'] : ['hb', 'hb'];
-      t.push('lh', 'hpy', 'tp');
-      if (singleSyl(it) && splitSyl(it.syl[0].s)[0]) t.push('pb');
-      if (speakOk(ctx)) t.push(hasPic ? 'speak' : 'echo', 'echo');
-    }
-    if (it.k === 'c') t.push('lb');
-    return t;
+  function choices(ctx, it) {
+    var hasPicture = it.k !== 'z' && !!(it.em || it.sw);
+    var types = [hasPicture ? 'lp' : 'lb', hasPicture ? 'hp' : 'hb'];
+    if (it.k !== 'z') types.push('lh');
+    if (Store.introduced(ctx.player, it.id) && speakOk(ctx)) types.push(hasPicture ? 'speak' : 'echo');
+    return types;
   }
 
-  var exerciseSkill = { lp: 'L', lb: 'L', lh: 'H', hp: 'H', hb: 'H', pp: 'P', hpy: 'P', pb: 'P', tp: 'T', speak: 'S', echo: 'S', zb: 'H', zbl: 'L' };
+  var exerciseSkill = { lp: 'L', lb: 'L', lh: 'H', hp: 'H', hb: 'H', speak: 'S', echo: 'S' };
 
   function weakness(player, id, skill) {
     var result = Store.ability(player, id, skill);
@@ -218,14 +178,6 @@
     if (result.streak === 0) return 9 + Math.min(3, Math.max(0, overdue));
     if (overdue >= 0) return 6 + Math.min(2, overdue);
     return [9, 3, 2, 0][result.streak];
-  }
-
-  function choices(ctx, it) {
-    var types = typesFor(ctx, it);
-    if (Store.introduced(ctx.player, it.id) && it.k !== 'z') {
-      types = types.concat([it.em || it.sw ? 'hp' : 'hb', 'hpy', 'tp']);
-    }
-    return types.filter(function (type, index) { return types.indexOf(type) === index; });
   }
 
   function priority(ctx, id) {
@@ -291,6 +243,11 @@
     }
     var warmup = U.pick(known.filter(function (id) { return Store.ability(p, id, 'L').streak >= 2; }));
     if (warmup) seq.push(listen(warmup));
+    var speakAbout = speakOk(ctx) && U.pick(known.filter(function (id) { return id !== warmup; }));
+    if (speakAbout) {
+      var spokenItem = item(speakAbout);
+      seq.push({ type: spokenItem.k !== 'z' && (spokenItem.em || spokenItem.sw) ? 'speak' : 'echo', item: speakAbout });
+    }
     fresh.forEach(function (id) {
       seq.push({ type: 'intro', item: id });
       seq.push(listen(id));
@@ -304,10 +261,10 @@
     });
     var extra = primary.filter(function (ex) { return fresh.indexOf(ex.item) < 0; })
       .map(function (ex) { return exFor(ctx, item(ex.item), [ex.type]); });
-    var reviewItems = review.filter(function (id) { return id !== warmup; });
+    var reviewItems = review.filter(function (id) { return id !== warmup && id !== speakAbout; });
     var overdue = Store.dueItems(p);
     var urgent = reviewItems.filter(function (id) { return priority(ctx, id) >= 6 || overdue.indexOf(id) >= 0; }).length;
-    var spare = Math.max(focused ? 0 : Math.min(2, urgent), (focused ? 6 : len) - fresh.length - primary.length - Number(!!warmup));
+    var spare = Math.max(focused ? 0 : Math.min(2, urgent), (focused ? 6 : len) - fresh.length - primary.length - Number(!!warmup) - Number(!!speakAbout));
     var reserve = focused ? 0 : Math.min(reviewItems.length, Math.ceil(spare / 2));
     extra = extra.slice(0, spare - reserve);
     var body = primary.concat(extra, reviewItems.slice(0, spare - extra.length).map(function (id) {
@@ -338,7 +295,6 @@
     words.forEach(function (id) { body.push({ type: 'lp', item: id }); });
     if (lesson.id === 'u1c') {
       body.push({ type: 'swipe', tones: all }); body.push({ type: 'tone', tones: all });
-      words.forEach(function (id) { body.push({ type: 'tp', item: id }); });
       if (words.length >= 4) body.push({ type: 'match', items: words });
     }
     return seq.concat(spread(U.shuffle(body)));
@@ -382,11 +338,9 @@
 
   /* Toonspel: veel stemmen, veel lettergrepen (training met variatie). */
   function buildToonspel(ctx) {
-    var body = [], p = ctx.player;
+    var body = [];
     for (var i = 0; i < 7; i++) body.push({ type: 'tone', tones: [1, 2, 3, 4], mixed: true });
     for (i = 0; i < 3; i++) body.push({ type: 'swipe', tones: [1, 2, 3, 4], mixed: true });
-    var known = U.shuffle(Store.knownItems(p).filter(function (id) { return item(id).k !== 'z'; })).slice(0, 4);
-    known.forEach(function (id) { body.push({ type: 'tp', item: id }); });
     return spread(U.shuffle(body));
   }
 
@@ -405,7 +359,7 @@
       return { type: 'tone', sample: info.sample, tones: [info.sample.t, other].sort() };
     }
     if (!it || !info.skill) return null;
-    return { type: ex.type === 'pb' ? 'hpy' : ex.type, item: it.id, easy: true };
+    return { type: ex.type, item: it.id, easy: true };
   }
 
   /* ---------- de les afspelen ---------- */
@@ -633,7 +587,6 @@
   }
   function picCard(it) { return h('span.card', picture(it), h('span.lbl', it.nl)); }
   function hzCard(it, showPy) { return h('span.card.hzc', hzBlock(it, showPy)); }
-  function pyCard(text) { return h('span.card.pyc', h('span.py', text)); }
 
   function optionsWith(api, it, n, mode, filter) {
     var d = distractors(api.ctx, it, n - 1, mode, filter);
@@ -741,67 +694,6 @@
     var opts = optionsWith(api, it, ex.easy ? 2 : 3, null);
     multiple(api, opts.map(function (x) { return { el: h('span.card.nlc', h('span.lbl', x.nl)), ok: x.id === it.id }; }), { item: it.id, skill: 'H', assisted: showPy });
   };
-  /* Pinyin -> plaatje (pinyin lezen) */
-  EX.pp = function (ex, api) {
-    var it = item(ex.item);
-    prompt(api, 'Lees de pinyin. Wat is het?', h('div.ex-py', h('span.py.xl', it.py)));
-    var opts = optionsWith(api, it, nOpts(api, it, ex), 'pinyin', function (x) { return x.em || x.sw; });
-    multiple(api, opts.map(function (x) { return { el: picCard(x), ok: x.id === it.id }; }), { item: it.id, skill: 'P' });
-  };
-  /* Teken -> pinyin */
-  EX.hpy = function (ex, api) {
-    var it = item(ex.item);
-    prompt(api, 'Hoe spreek je dit uit?', h('div.ex-hz', hzBlock(it, false, 'xl')));
-    var others = ex.easy ? [] : distractors(api.ctx, it, 1, 'pinyin', function (x) { return x.syl.length === it.syl.length; });
-    var variants = toneVariants(it, 1);
-    var opts = U.shuffle([{ t: it.py, ok: true }].concat(variants.map(function (v) { return { t: v, ok: false }; }))
-      .concat(others.map(function (x) { return { t: x.py, ok: false }; })));
-    multiple(api, opts.map(function (o) { return { el: pyCard(o.t), ok: o.ok }; }), { item: it.id, skill: 'P' });
-  };
-  /* Luister -> juiste tonen */
-  function toneVariants(it, n) {
-    var out = [], tries = 0;
-    var base = it.syl.map(function (s) { return { s: s.s, t: s.t, m: s.m }; });
-    while (out.length < n && tries++ < 40) {
-      var v = base.map(function (s) { return { s: s.s, t: s.t }; });
-      var changeable = v.map(function (s, i) { return s.t !== 5 ? i : -1; }).filter(function (i) { return i >= 0; });
-      if (!changeable.length) break;
-      var k = U.pick(changeable);
-      var nt = U.pick([1, 2, 3, 4].filter(function (t) { return t !== v[k].t; }));
-      v[k].t = nt;
-      if (changeable.length > 2 && Math.random() < 0.4) {
-        var k2 = U.pick(changeable); if (k2 !== k) v[k2].t = U.pick([1, 2, 3, 4].filter(function (t) { return t !== v[k2].t; }));
-      }
-      var txt = rebuildPy(it, v);
-      if (txt !== it.py && out.indexOf(txt) < 0) out.push(txt);
-    }
-    return out;
-  }
-  function rebuildPy(it, sylls) {
-    // zelfde woordgrenzen en hoofdletters als het origineel
-    var k = 0;
-    return it.py.replace(/[a-zA-Zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü]+/g, function (word) {
-      var out = '', rest = word;
-      while (rest.length && k < sylls.length) {
-        var orig = it.syl[k].m;
-        var take = rest.slice(0, orig.length);
-        var marked = markTone(sylls[k].s, sylls[k].t);
-        if (take[0] && take[0] !== take[0].toLowerCase()) marked = marked[0].toUpperCase() + marked.slice(1);
-        out += marked; rest = rest.slice(orig.length); k++;
-      }
-      return out + rest;
-    });
-  }
-  EX.tp = function (ex, api) {
-    var it = item(ex.item);
-    var file = au(it, 'any');
-    prompt(api, 'Welke tonen hoor je?', h('div.ex-listen', speakerBtn(file, { big: true }), slowBtn(file), h('div.ex-hzsmall', hzBlock(it, false))));
-    var variants = toneVariants(it, ex.easy ? 1 : 2);
-    var opts = U.shuffle([{ t: it.py, ok: true }].concat(variants.map(function (v) { return { t: v, ok: false }; })));
-    multiple(api, opts.map(function (o) { return { el: pyCard(o.t), ok: o.ok }; }), { item: it.id, skill: 'T' });
-    U.wait(250).then(function () { Snd.play(file); });
-  };
-
   /* Toon herkennen bij een losse lettergreep */
   function pickSyllable(ex, api) {
     if (ex.sample) return ex.sample;
@@ -917,55 +809,6 @@
   }
   L.classifyGesture = classifyGesture;
 
-  /* Pinyin bouwen: begin + einde + toon */
-  EX.pb = function (ex, api) {
-    var it = item(ex.item);
-    var s = it.syl[0];
-    var parts = splitSyl(s.s);
-    var file = au(it, 'any');
-    api.begin();
-    prompt(api, 'Bouw de pinyin van wat je hoort.', h('div.ex-listen', speakerBtn(file, { big: true }), slowBtn(file), h('div.ex-hzsmall', hzBlock(it, false))));
-    var result = h('div.pb-result', h('span.pb-i', '?'), h('span.pb-f', '?'));
-    api.main.appendChild(result);
-    var chosen = { i: null, f: null, t: null };
-    var rows = h('div.pb-rows');
-    function row(label, values, key, render) {
-      var r = h('div.pb-row', h('span.pb-lbl', label));
-      values.forEach(function (v) {
-        var b = h('button.pb-opt', { type: 'button' }, render ? render(v) : v);
-        b.addEventListener('click', function () {
-          Snd.fx('tap');
-          U.$$('.pb-opt', r).forEach(function (x) { x.classList.remove('sel'); });
-          b.classList.add('sel');
-          chosen[key] = v;
-          update();
-        });
-        r.appendChild(b);
-      });
-      rows.appendChild(r);
-    }
-    var ini = U.shuffle([parts[0]].concat(similarOf(parts[0], CONF_I, INITIALS)));
-    var fin = U.shuffle([parts[1]].concat(similarOf(parts[1], CONF_F, ALL_FINALS)));
-    row('begin', ini, 'i');
-    row('einde', fin, 'f');
-    row('toon', [1, 2, 3, 4], 't', function (t) { return h('span', { html: toneIcon(t, 34) }); });
-    api.main.appendChild(rows);
-    var check = h('button.btn.primary', { type: 'button', disabled: true }, 'Klaar');
-    api.main.appendChild(check);
-    function update() {
-      result.children[0].textContent = chosen.i || '?';
-      result.children[1].textContent = chosen.f ? (chosen.t ? markTone(chosen.f, chosen.t) : chosen.f) : '?';
-      check.disabled = !(chosen.i && chosen.f && chosen.t);
-    }
-    check.addEventListener('click', function () {
-      var ok = chosen.i === parts[0] && chosen.f === parts[1] && chosen.t === s.t;
-      check.disabled = true;
-      U.$$('.pb-opt', rows).forEach(function (x) { x.disabled = true; });
-      api.answer(ok, { item: it.id, skill: 'P' });
-    });
-    U.wait(250).then(function () { Snd.play(file); });
-  };
-
   /* Paren zoeken */
   EX.match = function (ex, api) {
     var pool = U.shuffle(ex.items.map(item));
@@ -1011,53 +854,6 @@
     U.shuffle(chosen).forEach(function (x) { right.appendChild(tile(x, 'r')); });
     api.main.appendChild(h('div.match', left, right));
   };
-
-  /* Zinnen bouwen. zbl = alleen luisteren (moeilijker) */
-  function zinBouw(ex, api, listenOnly) {
-    var it = item(ex.item);
-    var file = au(it, 'any');
-    var showPy = api.showPy(it, false);
-    api.begin();
-    if (listenOnly) prompt(api, 'Luister en maak de zin.', h('div.ex-listen', speakerBtn(file, { big: true }), slowBtn(file)));
-    else prompt(api, 'Maak de zin: ' + it.nl, h('div.ex-listen', speakerBtn(file), slowBtn(file)));
-    var line = h('div.zb-line');
-    var bank = h('div.zb-bank');
-    var tiles = it.tiles.map(function (t, i) { return { t: t, py: it.tilepy[i], i: i }; });
-    // één extra tegel als het woord al goed gekend is
-    if (Store.box(api.player, it.id) >= 2) {
-      var other = distractors(api.ctx, it, 1, null)[0];
-      if (other && other.tiles) {
-        var cand = other.tiles.map(function (t, i) { return { t: t, py: other.tilepy[i], i: -1 }; })
-          .filter(function (x) { return it.tiles.indexOf(x.t) < 0; });
-        if (cand.length) tiles.push(U.pick(cand));
-      }
-    }
-    var placed = [];
-    U.shuffle(tiles).forEach(function (tl) {
-      var b = h('button.zb-tile', { type: 'button' }, h('span.hz', { lang: 'zh-CN' }, tl.t), showPy ? h('span.zb-py', tl.py) : null);
-      b.addEventListener('click', function () {
-        Snd.fx('tap');
-        if (b.parentNode === bank) { line.appendChild(b); placed.push(tl); }
-        else { bank.appendChild(b); placed.splice(placed.indexOf(tl), 1); }
-        check.disabled = placed.length === 0;
-      });
-      bank.appendChild(b);
-    });
-    api.main.appendChild(line);
-    api.main.appendChild(bank);
-    var check = h('button.btn.primary', { type: 'button', disabled: true }, 'Klaar');
-    check.addEventListener('click', function () {
-      var ok = placed.map(function (x) { return x.t; }).join('') === it.hz && placed.every(function (x) { return x.i >= 0; });
-      check.disabled = true;
-      U.$$('.zb-tile').forEach(function (x) { x.disabled = true; });
-      line.classList.add(ok ? 'right' : 'wrong');
-      api.answer(ok, { item: it.id, skill: listenOnly ? 'L' : 'H', assisted: !listenOnly && showPy });
-    });
-    api.main.appendChild(check);
-    if (listenOnly) U.wait(250).then(function () { Snd.play(file); });
-  }
-  EX.zb = function (ex, api) { zinBouw(ex, api, false); };
-  EX.zbl = function (ex, api) { zinBouw(ex, api, true); };
 
   /* ---------- spreken ---------- */
   function micButton(label) {

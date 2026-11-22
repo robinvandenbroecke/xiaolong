@@ -50,7 +50,7 @@ window.GROWTH_CONTENT = [
       gloss: '本来 běnlái — oorspronkelijk · 天气预报 tiānqì yùbào — weerbericht · 不如 bùrú — laten we liever',
       nl: 'We wilden zaterdag fietsen, maar in de namiddag wordt zware regen verwacht. De bioscoop ligt op een uur rijden. Laten we in de voormiddag sporten en daarna samen lunchen.',
       questions: [['Wat wilden ze eerst doen?', 'Fietsen', 'Naar de bioscoop', 'Samen koken'], ['Waarom valt de bioscoop af?', 'Die ligt te ver', 'De film is uitverkocht', 'Ze opent pas zondag'], ['Hoe stel je de sporthal als alternatief voor?', '不如去体育馆打球吧。', '电影院太远了。', '我们已经吃过饭了。']],
-      tasks: ['Bedenk een regenplan voor je draak. Zeg wat je dan liever doet.', 'Stuur een vriend een nieuw voorstel voor zaterdag. Geef een reden en een tijd.', 'Stel twee alternatieven voor een groepsuitstap voor en kies er één met een reden.'],
+      tasks: ['Bedenk een regenplan voor je draak. Zeg wat je dan liever doet.', 'Bel een vriend met een nieuw voorstel voor zaterdag. Geef een reden en een tijd.', 'Stel twee alternatieven voor een groepsuitstap voor en kies er één met een reden.'],
       model: '下午会下雨，不如上午去打球，打完球一起吃饭。' },
     { id: 'groei-a2-trein', title: 'Waar vertrekt de trein?', aim: 'Vraag informatie en controleer welke optie haalbaar is.',
       text: '去北京的火车原来九点二十开，现在晚了半个小时。我们的票还能用，不过要去三号站台。离开车还有四十分钟，我们可以先买点吃的，再去站台等。',
@@ -80,7 +80,7 @@ window.GROWTH_CONTENT = [
       gloss: '展厅 zhǎntīng — tentoonstellingszaal · 承受 chéngshòu — dragen · 结实 jiēshi — stevig',
       nl: 'Het museumbezoek liep anders dan verwacht. De dinozaal was dicht, maar een experiment met papieren bruggen bleek boeiend. De vorm veranderen maakte hetzelfde papier steviger. Thuis wil de verteller het nog eens proberen.',
       questions: [['Waarom was de verteller eerst teleurgesteld?', 'De dinozaal was dicht', 'Het experiment mislukte', 'Het museum was te ver'], ['Wat maakte dezelfde soort papier steviger?', 'Een andere vorm', 'Een andere kleur', 'Een groter museum'], ['Hoe vertel je dat je het thuis opnieuw wilt proberen?', '回家以后，我想把这个实验再做一次。', '我以前每天都去博物馆。', '我觉得恐龙展厅已经开放了。']],
-      tasks: ['Vertel wat er eerst tegenviel en wat je daarna toch leuk vond.', 'Stuur een bericht over een uitstap. Verbind verwachting, gebeurtenis, gevoel en resultaat.', 'Schrijf een kort verslag over een ervaring. Leg uit hoe je mening veranderde en wat je ermee gaat doen.'],
+      tasks: ['Vertel wat er eerst tegenviel en wat je daarna toch leuk vond.', 'Vertel over een uitstap. Verbind verwachting, gebeurtenis, gevoel en resultaat.', 'Vertel in een kort gesprek over een ervaring. Leg uit hoe je mening veranderde en wat je ermee gaat doen.'],
       model: '我本来想看恐龙，后来做了一个实验。实验让我发现，改变纸的形状，也能让纸变得更结实。' },
     { id: 'groei-b1-uitstap', title: 'Eén uitstap, twee wensen', aim: 'Maak samen een haalbaar plan en leg uit waarom.',
       text: '这周六家里想一起出去。弟弟想去看熊猫，姐姐想去滑雪，可是这两个地方离得很远。妈妈说，天气预报显示上午会下雨，下午才会放晴。我们查了开放时间，发现室内的熊猫馆上午就开门，附近还有一条可以散步的小路。最后大家决定上午看熊猫，天气好转以后去散步，把滑雪留到下次。弟弟答应下次先听姐姐的建议。',
@@ -94,7 +94,7 @@ window.GROWTH_CONTENT = [
       gloss: '一次性 yícìxìng — voor eenmalig gebruik · 归还 guīhuán — terugbrengen · 效果 xiàoguǒ — effect',
       nl: 'De klas wil minder afval. Ze ontdekken vooral veel wegwerpbekers na de lunch. Leerlingen kunnen een eigen beker meenemen of er een lenen. Een inleverbak bij de uitgang helpt om ze terug te brengen. Na een week telt de klas hoeveel bekers ze bespaart.',
       questions: [['Wat is het voornaamste probleem na de lunch?', 'Veel wegwerpbekers', 'Te weinig speelruimte', 'Te weinig drinkwater'], ['Waarom komt de inleverbak aan de uitgang?', 'Daar denken leerlingen aan het terugbrengen', 'Daar halen ze extra wegwerpbekers', 'Daar tellen ze alle leerlingen'], ['Hoe stel je voor om het effect te meten?', '我们可以试一个星期，再数一数少了多少杯子。', '我们不用知道有没有效果。', '我们昨天借了一本书。']],
-      tasks: ['Vertel het probleem en jouw oplossing. Zeg hoe je ziet of het lukt.', 'Pitch een klassenplan. Leg uit wat het probleem is, wat je voorstelt en hoe je het test.', 'Schrijf of presenteer een voorstel van vijf samenhangende zinnen. Ga in op één bezwaar, geef een concreet meetpunt en nodig iemand uit om te reageren.'],
+      tasks: ['Vertel het probleem en jouw oplossing. Zeg hoe je ziet of het lukt.', 'Pitch een klassenplan. Leg uit wat het probleem is, wat je voorstelt en hoe je het test.', 'Presenteer een voorstel van vijf samenhangende zinnen. Ga in op één bezwaar, geef een concreet meetpunt en nodig iemand uit om te reageren.'],
       model: '我们发现，午饭以后有很多一次性杯子。可以让同学们带杯子，也可以借杯子。如果有人忘记还，就在出口放一个归还箱。我们先试一个星期，再比较用了多少杯子。你有什么建议？' }
   ] }
 ];

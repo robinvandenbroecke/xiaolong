@@ -8,7 +8,7 @@
   var updateStatus = '';
   var updating = false;
 
-  var SKILLS = [['L', 'Luisteren'], ['H', 'Tekens lezen'], ['P', 'Pinyin'], ['T', 'Tonen'], ['S', 'Spreken']];
+  var SKILLS = [['L', 'Luisteren'], ['H', 'Tekens lezen'], ['T', 'Tonen'], ['S', 'Spreken']];
 
   P.show = function (opts) {
     if (opts && opts.tab) tab = opts.tab;

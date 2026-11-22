@@ -66,67 +66,44 @@
     var opening = GROWTH_OPENINGS[lesson.id];
     var model = opening[2].join('');
     var accepted = [model, opening[3]].concat(opening[4]).map(normalizeReply);
-    var field = h('input.growth-chinese', { type: 'text', lang: 'zh-CN', maxlength: 120, autocomplete: 'off',
-      autocapitalize: 'off', placeholder: 'Chinees of pinyin' });
     var feedback = h('p.growth-feedback', { role: 'status' });
-    var submit = h('button.btn.primary', { type: 'submit' }, 'Stuur mijn antwoord');
     var done = false;
-    function check(replies) {
+    var finish = button('Ik heb het gezegd', finishReply, 'primary');
+    function finishReply() {
       if (done || !card.isConnected) return;
-      if (!replies.some(function (reply) { return accepted.indexOf(normalizeReply(reply)) >= 0; })) {
-        feedback.textContent = 'Ik herken die reactie nog niet. Pas je antwoord aan of probeer de hint.';
-        return;
-      }
       done = true;
-      submit.disabled = true;
-      field.disabled = true;
-      feedback.textContent = '✓ Je gesprek kan verder.';
-      card.appendChild(button('Verder', next, 'primary'));
+      next();
     }
     card.appendChild(h('h3', 'Jij mag beginnen'));
     card.appendChild(h('p', opening[0]));
-    card.appendChild(h('form.growth-writing', { onsubmit: function (event) {
-      event.preventDefault();
-      if (field.value.trim()) check([field.value]);
-      else feedback.textContent = 'Typ iets of gebruik de hint.';
-    } }, h('label.growth-writing', 'Jouw reactie', field), submit));
+    card.appendChild(h('p.small', 'Antwoord hardop in het Chinees.'));
     if (player.set.speak && navigator.onLine !== false && Voice.hasASR()) {
       var mic = button('🎙 Spreek in · online', function () {
         if (done || mic.disabled) return;
+        Snd.stop();
         mic.disabled = true;
+        finish.disabled = true;
         feedback.textContent = 'Ik luister…';
         Voice.listen().then(function (replies) {
           if (!card.isConnected || done) return;
-          if (replies.length) { field.value = replies[0]; check(replies); }
-          else feedback.textContent = 'Ik heb niets kunnen verstaan. Je kunt ook typen of de zinsdelen gebruiken.';
+          if (replies.some(function (reply) { return accepted.indexOf(normalizeReply(reply)) >= 0; })) {
+            feedback.textContent = '✓ Je reactie is herkend.';
+            finish.textContent = 'Verder';
+          } else {
+            feedback.textContent = 'Je reactie is nog niet herkend. Probeer opnieuw of ga verder na je eigen poging.';
+          }
         }).catch(function () {
-          if (card.isConnected && !done) feedback.textContent = 'Inspreken lukt nu niet. Je kunt typen of de zinsdelen gebruiken.';
-        }).then(function () { mic.disabled = false; });
-      });
+          if (card.isConnected && !done) feedback.textContent = 'Inspreken lukt nu niet. Zeg je antwoord hardop en ga daarna verder.';
+        }).then(function () { mic.disabled = false; finish.disabled = false; });
+      }, 'primary');
       card.appendChild(mic);
     }
     card.appendChild(feedback);
-    var parts = opening[2].filter(function (part) { return normalizeReply(part); });
-    var selected = [];
-    var draft = h('p.growth-chinese', { lang: 'zh-CN', 'aria-live': 'polite' }, '…');
-    var tiles = U.shuffle(parts).map(function (part) {
-      var tile = button(h('span', { lang: 'zh-CN' }, part), function () {
-        if (done || tile.disabled) return;
-        selected.push(part);
-        draft.textContent = selected.join('');
-        tile.disabled = true;
-      });
-      return tile;
-    });
-    // Elke knop kan maar één keer aan de zin worden toegevoegd.
-    var hint = h('details.box', h('summary', 'Hint of zinsdelen'), h('p', opening[1]), draft, h('div.row', tiles),
-      h('div.row', button('Controleer mijn zin', function () { check([selected.join('')]); }), button('Wis mijn zin', function () {
-        selected = [];
-        draft.textContent = '…';
-        tiles.forEach(function (tile) { tile.disabled = false; });
-      })), h('details.box', h('summary', 'Bekijk een voorbeeld'),
-        h('p.growth-chinese', { lang: 'zh-CN' }, model), h('p', opening[3])));
-    card.appendChild(hint);
+    card.appendChild(h('details.box', h('summary', 'Hoor een voorbeeld'),
+      button('🔊 Luister', function () { Snd.play(lesson.id + '-start.mp3'); }),
+      h('p.growth-chinese', { lang: 'zh-CN' }, model),
+      player.set.pinyin === 'never' ? null : h('details.box', h('summary', 'Pinyin als hulp'), h('p', opening[1]), h('p', opening[3]))));
+    card.appendChild(finish);
   }
 
   Growth.show = function (opts) {
@@ -139,6 +116,8 @@
       openConversation(quickCard, lessons['groei-a1-klas'], player, function () {
         U.clear(quickCard);
         quickCard.appendChild(h('p.growth-chinese', { lang: 'zh-CN' }, '我叫小明。'));
+        Snd.play('groei-gesprek-antwoord.mp3');
+        quickCard.appendChild(button('🔊 Luister opnieuw', function () { Snd.play('groei-gesprek-antwoord.mp3'); }));
         quickCard.appendChild(h('p', 'Het andere kind antwoordt dat het Xiaoming heet.'));
         quickCard.appendChild(button('Naar het leerpad', function () { App.go('home'); }, 'primary'));
       });
@@ -150,9 +129,7 @@
       App.go(player ? 'home' : 'chooser'); return;
     }
     var band = Growth.ageBand(player);
-    var before = Store.stage(player);
-    var goalBefore = Store.dayTotals(player).s >= player.set.goal;
-    var started = Date.now(), step = 0, score = 0, spoken = false, written = '';
+    var started = Date.now(), step = 0, score = 0, spoken = false;
     var root = h('main.growth');
     U.clear(U.$('#app')).appendChild(root);
     root.appendChild(h('header.sub-top', button('← Leerpad', function () { App.go('home'); }), h('h2', lesson.title)));
@@ -169,7 +146,9 @@
 
     function chinese(text) { return h('p.growth-chinese', { lang: 'zh-CN' }, text); }
     function help() {
-      return h('details.box', { open: band === 0 }, h('summary', 'Woordenhulp'), h('p', lesson.gloss));
+      var meaning = lesson.gloss.split(' · ').map(function (entry) { return entry.replace(/(\S+) .+? — /, '$1 — '); }).join(' · ');
+      return h('details.box', { open: band === 0 }, h('summary', 'Woordenhulp'), h('p', meaning),
+        player.set.pinyin === 'never' ? null : h('details.box', h('summary', 'Pinyin als hulp'), h('p', lesson.gloss)));
     }
     function question() {
       Snd.stop();
@@ -222,39 +201,31 @@
       Snd.stop();
       U.clear(card);
       progress.value = 4;
-      card.appendChild(h('h3', 'Nu jij'));
+      card.appendChild(h('h3', 'Nu jij: spreek Chinees'));
       card.appendChild(h('p', lesson.tasks[band]));
       if (node.level === 'B1' && band > 0) card.appendChild(h('details.box', h('summary', 'Oefen met iemand'),
         h('p', 'Laat iemand deze vervolgvraag stellen. Geef daarna een reden of een voorbeeld.'), chinese('你为什么这么想？'),
         h('p', 'Waarom denk je dat?')));
-      var field = h('textarea.growth-chinese', {
-        rows: band ? 5 : 3, lang: 'zh-CN', maxlength: 1200, placeholder: 'Chinees of pinyin'
-      });
-      var say = h('input', { type: 'checkbox' });
-      card.appendChild(h('label.growth-writing', 'Schrijf je antwoord', field));
-      card.appendChild(h('label.growth-speak', say, ' Ik heb mijn antwoord hardop gezegd.'));
       var criteria = band === 0 ? 'Beantwoord de opdracht met je eigen woorden.' :
         band === 1 ? 'Controleer of je alles hebt gezegd dat de opdracht vraagt.' :
           'Controleer of je zinnen samenhangen en of je je keuze of mening uitlegt wanneer dat gevraagd wordt.';
-      card.appendChild(h('details.box', h('summary', 'Bekijk een voorbeeld'), chinese(lesson.model), h('p', criteria)));
+      card.appendChild(h('details.box', h('summary', 'Hoor een voorbeeld'), button('🔊 Luister', function () { Snd.play(lesson.id + '-voorbeeld.mp3'); }), chinese(lesson.model), h('p', criteria)));
       card.appendChild(h('details.box', h('summary', 'Vertaling van het fragment'), h('p', lesson.nl)));
-      var finish = button('Rond de missie af', function () {
+      function finish(didSpeak) {
         if (step !== 3) return;
         step = 4;
-        spoken = say.checked;
-        written = field.value.trim();
+        spoken = didSpeak;
         result();
-      }, 'primary');
-      card.appendChild(finish);
+      }
+      card.appendChild(button('Ik heb mijn antwoord gezegd', function () { finish(true); }, 'primary'));
+      card.appendChild(button('Later hardop oefenen', function () { finish(false); }));
     }
 
     function result() {
       var day = U.dayNum();
       var passed = score >= 2;
-      var submitted = /[a-zA-Z\u00C0-\u024F\u3400-\u9FFF]/.test(written);
-      Growth.record(player, lesson.id, passed, submitted ? 'written' : null, day);
-      if (spoken) Growth.record(player, lesson.id, passed, 'spoken', day);
-      var stars = score * 2 + Number(submitted || spoken);
+      Growth.record(player, lesson.id, passed, spoken ? 'spoken' : null, day);
+      var stars = score * 2 + Number(spoken);
       Store.addStars(player, stars);
       for (var i = 0; i < score; i++) Mine.earn(player);
       Store.addSeconds(player, (Date.now() - started) / 1000);
@@ -272,8 +243,8 @@
         card.appendChild(h('h3', passed ? 'Missie klaar!' : 'Probeer deze missie opnieuw'));
         card.appendChild(h('p', score + ' van 3 vragen juist · +' + stars + ' ★ · +' + score + ' 🪙'));
         if (missionCoins) card.appendChild(h('p.mine-reward', '+' + missionCoins + ' 🪙 voor een expeditiebeloning'));
-        if (submitted || spoken) card.appendChild(h('p.small', 'Je eigen antwoord telt als oefening. Vergelijk het met het voorbeeld of bespreek het met iemand.'));
-        card.appendChild(h('details.box', h('summary', 'Bekijk het voorbeeld opnieuw'), chinese(lesson.model)));
+        if (spoken) card.appendChild(h('p.small', 'Vergelijk je gesproken antwoord met het voorbeeld of bespreek het met iemand.'));
+        card.appendChild(h('details.box', h('summary', 'Hoor het voorbeeld opnieuw'), button('🔊 Luister', function () { Snd.play(lesson.id + '-voorbeeld.mp3'); }), chinese(lesson.model)));
         if (!passed) card.appendChild(button('Probeer opnieuw', function () { App.go('growth', { lesson: node }); }, 'primary'));
         card.appendChild(button('Naar het leerpad', function () { App.go('home'); }, passed ? 'primary' : 'ghost'));
       }

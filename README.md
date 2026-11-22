@@ -1,16 +1,16 @@
 # Xiǎolóng 小龙
 
-Een webapp om kinderen Chinees te leren: luisteren, de vier tonen, pinyin, tekens lezen en zelf spreken. Elk kind heeft een eigen draakje dat uit een ei komt en groeit naarmate het oefent. De app werkt op tablet, telefoon en Boox (e-ink), ook zonder internet, en kan de voortgang van alle kinderen bewaren in een Google-spreadsheet, zodat ze op elk toestel verder kunnen.
+Een webapp om kinderen gesproken en geschreven Chinees te leren begrijpen en zelf te leren spreken. Pinyin helpt bij de uitspraak. Elk kind heeft een eigen draakje dat uit een ei komt en groeit naarmate het oefent. De app werkt op tablet, telefoon en Boox (e-ink), ook zonder internet, en kan de voortgang van alle kinderen bewaren in een Google-spreadsheet, zodat ze op elk toestel verder kunnen.
 
 ## Wat erin zit
 
 Veertien eenheden, samen 172 woorden, uitdrukkingen en zinnen, en dertien korte luisterverhalen. De volgorde begint bij de klanken en gaat dan naar de leefwereld van een kind: de vier tonen, hallo zeggen, tellen en vragen hoe oud iemand is, de familie, dieren, eten (met frietjes, dumplings en chocolade), een geheimtaal voor broers (snel!, wacht even, mijn beurt, niet eerlijk!, ik heb gewonnen), kleuren, het lichaam met een spelletje "Xiǎolóng zegt…", bewegen en sporten (skiën, zwemmen, voetballen), tekens die nog op tekeningen lijken (山, 火, 木, 日, 月), speelgoed en school, gevoelens, en Chinees Nieuwjaar.
 
-Na het basispad volgen dertien taalmissies met doelen van A1 tot B1. Elke missie combineert een ingesproken situatie, lezen, een passende reactie kiezen en een eigen antwoord spreken of schrijven. Afgeronde missies komen gespreid terug. Onder **Ouderhoek → Spelers** kies je optioneel een geboortejaar. De opdracht past zich aan voor kinderen tot 8 jaar, 9–11 jaar en vanaf 12 jaar. De taalniveaus zijn leerdoelen. De app beoordeelt de keuzebeoefeningen en geeft een voorbeeld voor de vrije antwoorden.
+Na het basispad volgen dertien taalmissies met doelen van A1 tot B1. Elke missie begint met een korte mondelinge reactie en combineert vervolgens luisteren, lezen en vrij spreken. Opnames geven een voorbeeld om naar te luisteren en na te zeggen. De begripsvragen bepalen de doorstroming. Afgeronde missies komen gespreid terug. Onder **Ouderhoek → Spelers** kies je optioneel een geboortejaar. De opdracht past zich aan voor kinderen tot 8 jaar, 9–11 jaar en vanaf 12 jaar.
 
 Na elke basiseenheid volgt een verhaaltje met Xiǎolóng, de panda Yuányuan, het aapje Xiǎohóu en Oma, met vragen achteraf. Vier eenheden hebben een les over een tekenfamilie: 女 (vrouw), 口 (mond), 犭 (dier), 𧾷 (voet), 氵 (water), 木 (boom), 日 (zon), 亻 (mens) en 目 (oog).
 
-De oefeningen: luisteren en het juiste plaatje kiezen, luisteren en het juiste teken kiezen, een teken lezen, pinyin lezen, de juiste tonen kiezen, een toon herkennen, een toon met de vinger tekenen, pinyin bouwen uit begin, einde en toon, paren zoeken, zinnen bouwen met woordtegels, nazeggen met een toonlijn, en zelf een woord zeggen bij een plaatje.
+De oefeningen: luisteren en het juiste plaatje of teken kiezen, tekens lezen en begrijpen, een toon herkennen of met de vinger tekenen, paren zoeken, nazeggen met een toonlijn en zelf bij een plaatje zeggen wat het is.
 
 Beloningen: sterren per goed antwoord en extra sterren bij een reeks van vijf, lantaarns per les, een dagdoel met een rood envelopje (红包) waarin een sticker zit voor het album (de twaalf dieren van de Chinese kalender en dingen uit China, elk met een kort weetje), een week vol lantaarns, en een draak die groeit van ei tot gouden draak. Als er meer kinderen spelen, is er een gezamenlijk weekdoel: samen alle lantaarns laten branden, in plaats van tegen elkaar. Er zijn geen levens en geen straffen.
 
