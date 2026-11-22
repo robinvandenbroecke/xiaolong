@@ -88,7 +88,7 @@
   }
 
   function safeToApply() {
-    return ['lesson', 'story', 'results', 'hongbao', 'mine', 'wardrobe', 'adventure', 'china', 'newplayer'].indexOf(App.screen()) === -1;
+    return ['lesson', 'story', 'growth', 'results', 'hongbao', 'mine', 'wardrobe', 'adventure', 'china', 'newplayer'].indexOf(App.screen()) === -1;
   }
 
   function familyProgress(local, remote) {

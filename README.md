@@ -1,12 +1,14 @@
 # Xiǎolóng 小龙
 
-Een webapp om kinderen van zeven tot tien jaar Chinees te leren: luisteren, de vier tonen, pinyin, tekens lezen en zelf spreken. Elk kind heeft een eigen draakje dat uit een ei komt en groeit naarmate het oefent. De app werkt op tablet, telefoon en Boox (e-ink), ook zonder internet, en kan de voortgang van alle kinderen bewaren in een Google-spreadsheet, zodat ze op elk toestel verder kunnen.
+Een webapp om kinderen Chinees te leren: luisteren, de vier tonen, pinyin, tekens lezen en zelf spreken. Elk kind heeft een eigen draakje dat uit een ei komt en groeit naarmate het oefent. De app werkt op tablet, telefoon en Boox (e-ink), ook zonder internet, en kan de voortgang van alle kinderen bewaren in een Google-spreadsheet, zodat ze op elk toestel verder kunnen.
 
 ## Wat erin zit
 
 Veertien eenheden, samen 172 woorden, uitdrukkingen en zinnen, en dertien korte luisterverhalen. De volgorde begint bij de klanken en gaat dan naar de leefwereld van een kind: de vier tonen, hallo zeggen, tellen en vragen hoe oud iemand is, de familie, dieren, eten (met frietjes, dumplings en chocolade), een geheimtaal voor broers (snel!, wacht even, mijn beurt, niet eerlijk!, ik heb gewonnen), kleuren, het lichaam met een spelletje "Xiǎolóng zegt…", bewegen en sporten (skiën, zwemmen, voetballen), tekens die nog op tekeningen lijken (山, 火, 木, 日, 月), speelgoed en school, gevoelens, en Chinees Nieuwjaar.
 
-Een les duurt vijf à zes minuten. Na elke eenheid volgt een verhaaltje met Xiǎolóng, de panda Yuányuan, het aapje Xiǎohóu en Oma, met vragen achteraf. Vier eenheden hebben een les over een tekenfamilie: 女 (vrouw), 口 (mond), 犭 (dier), 𧾷 (voet), 氵 (water), 木 (boom), 日 (zon), 亻 (mens) en 目 (oog).
+Na het basispad volgen dertien taalmissies met doelen van A1 tot B1. Elke missie combineert een ingesproken situatie, lezen, een passende reactie kiezen en een eigen antwoord spreken of schrijven. Afgeronde missies komen gespreid terug. Onder **Ouderhoek → Spelers** kies je optioneel een geboortejaar. De opdracht past zich aan voor kinderen tot 8 jaar, 9–11 jaar en vanaf 12 jaar. De taalniveaus zijn leerdoelen. De app beoordeelt de keuzebeoefeningen en geeft een voorbeeld voor de vrije antwoorden.
+
+Na elke basiseenheid volgt een verhaaltje met Xiǎolóng, de panda Yuányuan, het aapje Xiǎohóu en Oma, met vragen achteraf. Vier eenheden hebben een les over een tekenfamilie: 女 (vrouw), 口 (mond), 犭 (dier), 𧾷 (voet), 氵 (water), 木 (boom), 日 (zon), 亻 (mens) en 目 (oog).
 
 De oefeningen: luisteren en het juiste plaatje kiezen, luisteren en het juiste teken kiezen, een teken lezen, pinyin lezen, de juiste tonen kiezen, een toon herkennen, een toon met de vinger tekenen, pinyin bouwen uit begin, einde en toon, paren zoeken, zinnen bouwen met woordtegels, nazeggen met een toonlijn, en zelf een woord zeggen bij een plaatje.
 
@@ -101,6 +103,7 @@ Lokaal proberen: `python3 -m http.server` in deze map en open `http://localhost:
 
 - Opnames van woorden en lettergrepen: [audio-cmn](https://github.com/hugolpz/audio-cmn), stemmen van Yue Tan en Chen Wang, CC BY-SA. Bestanden in `audio/` die eindigen op `-h.mp3` of `-s.mp3` vallen daaronder.
 - Spraaksynthese via [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx): Kokoro (Apache 2.0) en Matcha met de Biaobei-stem. Die stem is getraind op de Chinese Standard Mandarin Speech Corpus van Databaker, die alleen voor niet-commercieel gebruik vrijgegeven is. Voor een gezinsapp is dat in orde; wie de app commercieel wil gebruiken, moet die opnames vervangen (bestanden in `audio/` die eindigen op `-a.mp3` of `-all.mp3`).
-- Lettertypen: Fredoka, Andika en LXGW WenKai GB, alle drie SIL Open Font License (`fonts/`).
+- De fragmenten `audio/groei-*.mp3` zijn synthetisch ingesproken met [Piper Huayan](https://huggingface.co/rhasspy/piper-voices/blob/main/zh/zh_CN/huayan/medium/MODEL_CARD).
+- Lettertypen: Fredoka, Andika, LXGW WenKai GB en een subset van Noto Sans CJK SC, onder de SIL Open Font License (`fonts/`).
 - QR-codes: qrcode-generator van Kazuhiko Arase, MIT.
 - Uitspraaktabel voor de spraakherkenning: gemaakt met [pypinyin](https://github.com/mozillazg/python-pinyin), MIT.

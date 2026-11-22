@@ -118,6 +118,16 @@
       (container || body).appendChild(row);
     }
     body.appendChild(h('h3.parent-group-title', 'Leren'));
+    var birth = h('select', { 'aria-label': 'Geboortejaar' }, h('option', { value: '0' }, 'Geen geboortejaar'));
+    var year = new Date().getFullYear();
+    for (var y = year; y >= year - 90; y--) birth.appendChild(h('option', { value: String(y) }, String(y)));
+    birth.value = String(p.set.growthBirth || 0);
+    birth.addEventListener('change', function () {
+      Store.setSetting(p, 'growthBirth', Number(birth.value));
+      App.syncSoon();
+    });
+    body.appendChild(h('div.set-row', h('label.set-l', h('strong', 'Geboortejaar'),
+      h('span', 'Optioneel. De opdrachten in het groeipad passen zich aan de leeftijd aan.'), birth)));
     choice('Dagdoel', 'Sterren per dag voor het rode envelopje.', 'goal', [[10, '10'], [20, '20'], [40, '40'], [60, '60']]);
     choice('Lengte van een les', 'Aantal vragen, zonder de kennismaking met nieuwe woorden.', 'len', [[8, 'kort'], [12, 'gewoon'], [16, 'lang']]);
     choice('Pinyin boven de tekens', 'Stilaan weg: pinyin verdwijnt bij woorden die het kind goed kent, zodat het naar het teken kijkt.', 'pinyin', [['fade', 'stilaan weg'], ['always', 'altijd'], ['never', 'nooit']]);

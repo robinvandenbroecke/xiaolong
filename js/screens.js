@@ -24,6 +24,7 @@
   Scr.lanternSVG = lanternSVG;
 
   function nodeLabel(lesson) {
+    if (lesson.kind === 'groei') return lesson.level;
     if (lesson.kind === 'verhaal') return '📜';
     if (lesson.kind === 'toonles') return lesson.id === 'u1a' ? 'ā à' : lesson.id === 'u1b' ? 'á ǎ' : 'āáǎà';
     if (lesson.kind === 'tekens') return lesson.comps.join('');
@@ -236,6 +237,9 @@
     var section = h('section.lesson-overview', { 'aria-label': 'Leerpad en voortgang' });
     var full = h('button.btn.ghost.lesson-path-link', { type: 'button', onclick: function () { App.go('path'); } }, 'Hele leerpad');
     section.appendChild(h('div.lesson-overview-head', h('h2', 'Leerpad'), full));
+    var review = Growth.nextReview(p, U.dayNum());
+    if (review) section.appendChild(h('button.btn.ghost', { type: 'button', onclick: function () { App.go('growth', { lesson: review.lesson }); } },
+      'Herhaal · ' + review.lesson.title));
     section.appendChild(h('div.lesson-meter',
       h('progress', { value: done, max: all.length || 1, 'aria-label': 'Afgeronde lessen' }),
       h('span', done + ' van ' + all.length + ' lessen klaar')));
@@ -290,7 +294,7 @@
         var n = h('div.node.' + st + (isCur ? '.current' : '') + '.pos' + (li % 4));
         var b = h('button.lantern', { type: 'button', disabled: !open, 'aria-label': l.title },
           h('span.l-svg', { html: lanternSVG(st === 'locked' ? 'locked' : 'done', st === 'open' ? u.color : null) }),
-          h('span.l-txt' + (l.kind === 'les' || l.kind === 'tekens' ? '.zh' : ''), { lang: 'zh-CN' }, nodeLabel(l)));
+          h('span.l-txt' + (l.kind === 'les' || l.kind === 'tekens' ? '.zh' : ''), { lang: l.kind === 'groei' ? null : 'zh-CN' }, nodeLabel(l)));
         b.addEventListener('click', function () { Snd.unlock(); Snd.fx('tap'); Scr.nodeSheet(p, u, l); });
         n.appendChild(b);
         if (isCur) n.appendChild(h('span.node-dragon', { html: Dragon.forPlayer(p, 'happy', { crop: 'head' }) }));
@@ -301,7 +305,7 @@
       unit.appendChild(nodes);
       path.appendChild(unit);
     });
-    path.appendChild(h('p.path-end', 'Meer eenheden volgen. 加油！'));
+    path.appendChild(h('p.path-end', 'Einde van het groeipad · 加油！'));
     wrap.appendChild(path);
     root.appendChild(wrap);
   };
@@ -325,6 +329,8 @@
       body.appendChild(chips);
     } else if (l.kind === 'verhaal') {
       body.appendChild(h('p', 'Een kort verhaal om naar te luisteren, met vragen achteraf.'));
+    } else if (l.kind === 'groei') {
+      body.appendChild(h('p', l.aim));
     } else if (l.kind === 'toonles') {
       body.appendChild(h('p', 'Luister naar de tonen en teken ze met je vinger.'));
     } else if (l.kind === 'tekens') {
@@ -336,6 +342,7 @@
     go.addEventListener('click', function () {
       App.closeModal();
       if (l.kind === 'verhaal') App.go('story', { unit: u, lesson: l });
+      else if (l.kind === 'groei') App.go('growth', { lesson: l });
       else App.startLesson({ unit: u, lesson: l });
     });
     body.appendChild(go);

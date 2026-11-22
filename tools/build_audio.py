@@ -380,7 +380,7 @@ def main():
         # oude bestanden opruimen
         keep = set(f for k, v in manifest.items() if k != "_pc" for f in v)
         for f in os.listdir(OUT):
-            if f.endswith(".mp3") and f not in keep:
+            if f.endswith(".mp3") and not f.startswith("groei-") and f not in keep:
                 os.remove(os.path.join(OUT, f))
         size = sum(os.path.getsize(os.path.join(OUT, f)) for f in keep)
         print("audio: %d bestanden, %.1f MB" % (len(keep), size / 1e6))

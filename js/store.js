@@ -27,7 +27,7 @@
     { min: 900, nl: 'Wolkendraak' },
     { min: 1600, nl: 'Gouden draak' }
   ];
-  S.DEFAULT_SET = { goal: 20, pinyin: 'fade', speak: true, len: 12, unlockAll: false, toneColors: false, t: 0 };
+  S.DEFAULT_SET = { goal: 20, pinyin: 'fade', speak: true, len: 12, unlockAll: false, toneColors: false, growthBirth: 0, t: 0 };
 
   function now() { return Date.now(); }
 
