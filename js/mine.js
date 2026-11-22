@@ -4,6 +4,11 @@
   var h = U.h;
   var Mine = {};
   var price = 6;
+  var gear = [
+    { id: 'crown', slot: 'head', name: 'Gouden kroon', icon: '👑', price: 12 },
+    { id: 'cape', slot: 'body', name: 'Paarse cape', icon: '🟣', price: 16 },
+    { id: 'medal', slot: 'neck', name: 'Drakenmedaille', icon: '🏅', price: 8 }
+  ];
   var cards = [
     { id: 'hout', name: 'Takbever', hz: '木', py: 'mù', word: 'hout', audio: 'mu-h.mp3', sky: '#f4ce8e', palette: ['#643c2c','#a66a46','#f4d198','#fff1ce'], art: ['..........','.11....11.','.12222221.','1222222221','1202222021','1223333221','.13300331.','..344443..','...1111...','..11..11..'] },
     { id: 'vuur', name: 'Vonkvos', hz: '火', py: 'huǒ', word: 'vuur', audio: 'huo-h.mp3', sky: '#ffcb9d', palette: ['#6d2532','#ec6939','#ffc34e','#fff0cc'], art: ['..........','1........1','12......21','123....321','1222222221','.12222221.','.13022031.','..134431..','....11....','..........'] },
@@ -15,7 +20,7 @@
 
   function data(player) {
     if (!player.mine) player.mine = {};
-    ['earned', 'spent', 'cards', 'practice'].forEach(function (key) {
+    ['earned', 'spent', 'cards', 'practice', 'gear'].forEach(function (key) {
       if (!player.mine[key]) player.mine[key] = {};
     });
     return player.mine;
@@ -109,7 +114,7 @@
       reveal(player, result.card, result.duplicate ? 'Dubbele kaart · 2 munten terug' : 'Nieuwe kaart!');
     }, 'primary');
     pack.disabled = balance < price;
-    room.appendChild(h('div.row', pack, button('Bouw de brug', function () { play(player, room); })));
+    room.appendChild(h('div.row', pack, button('Bouw de brug', function () { play(player, room); }), button('Drakengarderobe', function () { App.go('wardrobe'); })));
     var album = h('div.mine-album');
     cards.forEach(function (card) {
       var owned = !!data(player).cards[card.id];
@@ -124,6 +129,44 @@
     room.appendChild(h('h3', 'Mijn kaarten'));
     room.appendChild(album);
     room.appendChild(h('p.small', 'Een gouden kaart verdien je door het woord op drie verschillende dagen meteen goed te herkennen in het brugspel.'));
+  };
+
+  Mine.wardrobe = function () {
+    var player = Store.current();
+    if (!player) { App.go('chooser'); return; }
+    var wallet = data(player);
+    var balance = Mine.balance(player);
+    var room = h('section.mine-room');
+    U.clear(U.$('#app')).appendChild(room);
+    room.appendChild(h('header.sub-top', button('← Terug', function () { App.go('home'); App.syncSoon(); }), h('h2', 'Drakengarderobe')));
+    room.appendChild(h('p.mine-balance', balance + ' 🪙'));
+    room.appendChild(h('div.wardrobe-dragon', { html: Dragon.forPlayer(player, 'happy', { stage: Math.max(1, Store.stage(player)) }) }));
+    if (!player.hatch) room.appendChild(h('p.small', 'Zo ziet je draak eruit zodra hij uit het ei komt.'));
+    var list = h('div.wardrobe-items');
+    gear.forEach(function (item) {
+      var owned = !!wallet.gear[item.id];
+      var choice = player.outfit && player.outfit[item.slot];
+      var worn = owned && choice && choice.id === item.id;
+      var label = owned ? (worn ? 'Uitdoen' : 'Aandoen') : 'Koop · ' + item.price + ' 🪙';
+      var action = button(label, function () {
+        if (!wallet.gear[item.id]) {
+          if (Mine.balance(player) < item.price) return;
+          increment(wallet.spent, item.price);
+          wallet.gear[item.id] = Date.now();
+        }
+        player.outfit = player.outfit || {};
+        player.outfit[item.slot] = { id: worn ? '' : item.id, t: Date.now() };
+        Store.save();
+        App.syncSoon();
+        Mine.wardrobe();
+      }, 'primary');
+      action.disabled = !owned && balance < item.price;
+      if (!owned && action.disabled) action.textContent = 'Nog ' + (item.price - balance) + ' 🪙 sparen';
+      action.setAttribute('aria-label', item.name + ' · ' + action.textContent);
+      list.appendChild(h('div.mine-card', h('span.wardrobe-icon', { 'aria-hidden': 'true' }, item.icon),
+        h('strong', item.name), action));
+    });
+    room.appendChild(list);
   };
 
   function play(player, room) {

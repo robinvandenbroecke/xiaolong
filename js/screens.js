@@ -207,6 +207,8 @@
     side.appendChild(acts);
     side.appendChild(h('button.mine-entry', { type: 'button', onclick: function () { App.go('mine'); } },
       h('strong', '⛏ Blokkenmijn'), h('span', Mine.label(p))));
+    side.appendChild(h('button.mine-entry', { type: 'button', onclick: function () { App.go('wardrobe'); } },
+      h('strong', '👑 Drakengarderobe'), h('span', Mine.balance(p) + ' 🪙')));
 
     // samen-doel
     if (Store.players().length > 1) {

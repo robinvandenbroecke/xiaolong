@@ -247,6 +247,20 @@
     }
     r.t = now();
   };
+  S.ability = function (p, id, skill) {
+    return (p.ability && p.ability[skill] && p.ability[skill][id]) || { streak: 0, due: 0 };
+  };
+  S.gradeAbility = function (p, id, skill, ok, assisted) {
+    if (['L', 'H', 'P', 'T', 'S'].indexOf(skill) < 0 || (ok && assisted)) return;
+    var previous = S.ability(p, id, skill);
+    var day = U.dayNum();
+    // Een reeks vraagt gespreide successen. Een fout wordt meteen meegeteld.
+    if (ok && previous.day === day && previous.streak > 0) return;
+    var streak = ok ? Math.min(3, previous.streak + 1) : 0;
+    p.ability = p.ability || {};
+    p.ability[skill] = p.ability[skill] || {};
+    p.ability[skill][id] = { streak: streak, day: day, due: day + [0, 1, 3, 7][streak], t: now() };
+  };
   S.box = function (p, id) { var r = p.items[id]; return r ? r.b : 0; };
   S.dueItems = function (p) {
     var td = U.dayNum();

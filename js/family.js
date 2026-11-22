@@ -83,7 +83,7 @@
       // Laat het actieve lesobject intact tot de les klaar is.
       var current = Object.keys(state.players).map(function (id) { return state.players[id]; });
       var players = XLMerge.mergePlayers(current, remote);
-      var changed = App.screen() !== 'lesson' && App.screen() !== 'mine' && Store.mergePlayers(remote);
+      var changed = App.screen() !== 'lesson' && App.screen() !== 'mine' && App.screen() !== 'wardrobe' && Store.mergePlayers(remote);
       if (XLMerge.same(players, remote)) return changed;
       return progress(token, row ? 'PATCH' : 'POST',
         row ? filter + '&revision=eq.' + row.revision : '',

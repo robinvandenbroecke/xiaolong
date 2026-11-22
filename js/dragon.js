@@ -39,6 +39,10 @@
     if (body) [160, 172, 184].forEach(function (y) {
       s.push('<path d="M' + (86 - (y - 160) * 0.08) + ',' + y + ' Q100,' + (y + 6) + ' ' + (114 + (y - 160) * 0.08) + ',' + y + '" stroke="' + dark + '" stroke-opacity=".35" stroke-width="2" fill="none"/>');
     });
+    if (body && opts.outfit && opts.outfit.body === 'cape') {
+      s.push('<path d="M68,133 Q100,150 132,133 L151,192 Q136,211 118,197 L107,155 L93,155 L82,197 Q64,211 49,192 Z" fill="#8741a5" stroke="#23233F" stroke-width="3"/>');
+      s.push('<path d="M55,190 Q68,201 78,193 M122,193 Q132,201 145,190" fill="none" stroke="#f6b73c" stroke-width="3"/>');
+    }
     // voeten
     if (body) [82, 118].forEach(function (x) {
       s.push('<ellipse cx="' + x + '" cy="199" rx="15" ry="8" fill="' + dark + '" stroke="' + INK + '" stroke-width="3"/>');
@@ -82,6 +86,12 @@
       s.push('<path d="' + (long ? 'M128,108 C148,110 164,122 166,138 C167,146 158,148 156,142' : 'M128,108 C142,110 152,116 158,126') + '" stroke="' + horn + '" stroke-width="3" fill="none" stroke-linecap="round"/>');
     }
     s.push(face(mood));
+    if (opts.outfit && opts.outfit.head === 'crown') {
+      s.push('<path d="M76,52 L71,27 L88,38 L100,19 L112,38 L129,27 L124,52 Z" fill="#f6b73c" stroke="#23233F" stroke-width="3"/><circle cx="100" cy="43" r="5" fill="#dd4a61" stroke="#23233F" stroke-width="2"/>');
+    }
+    if (body && opts.outfit && opts.outfit.neck === 'medal') {
+      s.push('<path d="M78,130 L100,154 L122,130" fill="none" stroke="#3964ad" stroke-width="6"/><circle cx="100" cy="158" r="9" fill="#f6b73c" stroke="#23233F" stroke-width="2"/><path d="M100,153 V163 M95,158 H105" stroke="#945622" stroke-width="2"/>');
+    }
     s.push('</g>');
     if (mood === 'sleep') s.push('<text x="150" y="40" font-family="Fredoka, sans-serif" font-size="22" fill="' + INK + '">z<tspan font-size="16" dy="-8">z</tspan></text>');
     s.push('</svg>');
@@ -153,6 +163,11 @@
     svg: dragonSVG,
     forPlayer: function (p, mood, extra) {
       var o = { color: Store.colorOf(p), stage: Store.stage(p), mood: mood || 'normal' };
+      o.outfit = {};
+      ['head', 'body', 'neck'].forEach(function (slot) {
+        var selection = p.outfit && p.outfit[slot];
+        if (selection && p.mine && p.mine.gear && p.mine.gear[selection.id]) o.outfit[slot] = selection.id;
+      });
       if (extra) Object.keys(extra).forEach(function (k) { o[k] = extra[k]; });
       return dragonSVG(o);
     }

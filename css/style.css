@@ -591,3 +591,9 @@ html.eink .title .hz { color: #000; }
 .parent .tabs .tab { min-width: 0; padding-inline: .25rem; white-space: normal; min-height: 44px; }
 .parent-group-title { margin-top: 1rem; }
 .parent-details > summary { cursor: pointer; font-weight: 700; min-height: 44px; align-content: center; }
+
+.wardrobe-dragon { width: min(42vw, 180px); margin: .25rem auto; }
+.wardrobe-items { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .6rem; }
+.wardrobe-items .mine-card { padding: .65rem; gap: .55rem; }
+.wardrobe-items .btn { min-height: 44px; padding: .35rem .55rem; font-size: .9rem; }
+.wardrobe-icon { font-size: 1.6rem; }

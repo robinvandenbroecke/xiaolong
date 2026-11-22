@@ -90,7 +90,7 @@
         if (st !== Store.state()) return false;
         if (!r.ok) throw new Error(r.error === 'sleutel' ? 'De sleutel klopt niet.' : (r.error || 'Fout bij de spreadsheet.'));
         var all = XLMerge.mergePlayers(Object.keys(st.players).map(function (k) { return st.players[k]; }), r.players || []);
-        if (App.screen() === 'mine') { setStatus('ok', ''); return false; }
+        if (App.screen() === 'mine' || App.screen() === 'wardrobe') { setStatus('ok', ''); return false; }
         all.forEach(function (p) { st.players[p.id] = p; });
         var sentIds = {};
         sent.forEach(function (e) { sentIds[e.id] = 1; });

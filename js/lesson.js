@@ -209,10 +209,43 @@
     return t;
   }
 
+  var exerciseSkill = { lp: 'L', lb: 'L', lh: 'H', hp: 'H', hb: 'H', pp: 'P', hpy: 'P', pb: 'P', tp: 'T', speak: 'S', echo: 'S', zb: 'H', zbl: 'L' };
+
+  function weakness(player, id, skill) {
+    var result = Store.ability(player, id, skill);
+    if (!result.t) return 4;
+    if (result.streak === 0) return 7;
+    if (result.due <= U.dayNum()) return 5;
+    return [7, 3, 2, 0][result.streak];
+  }
+
+  function choices(ctx, it) {
+    var types = typesFor(ctx, it);
+    if (Store.introduced(ctx.player, it.id) && it.k !== 'z') {
+      types = types.concat([it.em || it.sw ? 'hp' : 'hb', 'hpy', 'tp']);
+    }
+    return types.filter(function (type, index) { return types.indexOf(type) === index; });
+  }
+
+  function priority(ctx, id) {
+    return Math.max.apply(null, choices(ctx, item(id)).map(function (type) {
+      return weakness(ctx.player, id, exerciseSkill[type]);
+    }));
+  }
+
   function exFor(ctx, it, avoidTypes) {
-    var opts = typesFor(ctx, it).filter(function (t) { return !avoidTypes || avoidTypes.indexOf(t) < 0; });
-    if (!opts.length) opts = typesFor(ctx, it);
-    return { type: U.pick(opts), item: it.id };
+    var types = choices(ctx, it);
+    var available = types.filter(function (type) {
+      return !avoidTypes || avoidTypes.indexOf(type) < 0;
+    });
+    if (available.length) types = available;
+    var ranked = U.shuffle(types).sort(function (a, b) {
+      return weakness(ctx.player, it.id, exerciseSkill[b]) - weakness(ctx.player, it.id, exerciseSkill[a]);
+    });
+    var type = ranked[0];
+    var skill = exerciseSkill[type];
+    return { type: type, item: it.id, easy: Store.ability(ctx.player, it.id, skill).streak < 2,
+      independent: skill === 'H' && Store.introduced(ctx.player, it.id) && /^(hp|hb|lh)$/.test(type) };
   }
 
   /* Volgorde zonder hetzelfde woord twee keer na elkaar. */
@@ -251,11 +284,12 @@
     // herhaling van woorden die aan de beurt zijn
     var due = Store.dueItems(p).filter(function (id) { return lessonItems.indexOf(id) < 0; });
     var need = Math.max(3, len - body.length - (fresh.length ? 1 : 0));
+    due.sort(function (a, b) { return priority(ctx, b) - priority(ctx, a); });
     due.slice(0, need).forEach(function (id) { body.push(exFor(ctx, item(id))); });
     // nog niet genoeg? dan zwakke of willekeurige gekende woorden
     if (body.length < len) {
       var known = U.shuffle(Store.knownItems(p).filter(function (id) { return lessonItems.indexOf(id) < 0 && due.indexOf(id) < 0; }));
-      known.sort(function (a, b) { return Store.box(p, a) - Store.box(p, b); });
+      known.sort(function (a, b) { return priority(ctx, b) - priority(ctx, a) || Store.box(p, a) - Store.box(p, b); });
       known.slice(0, len - body.length).forEach(function (id) { body.push(exFor(ctx, item(id))); });
     }
     body = spread(U.shuffle(body)).slice(0, Math.max(len, lessonItems.length * 2));
@@ -320,15 +354,10 @@
   function buildOefen(ctx) {
     var p = ctx.player, len = p.set.len || 12;
     var due = Store.dueItems(p);
-    var ids = due.slice(0, len);
-    if (ids.length < len) {
-      var known = Store.knownItems(p).filter(function (id) { return ids.indexOf(id) < 0; });
-      known.sort(function (a, b) {
-        var ra = p.items[a], rb = p.items[b];
-        return (rb.w - rb.c / 3) - (ra.w - ra.c / 3) || ra.b - rb.b;
-      });
-      ids = ids.concat(known.slice(0, len - ids.length));
-    }
+    var ids = U.shuffle(Store.knownItems(p)).sort(function (a, b) {
+      return priority(ctx, b) - priority(ctx, a) ||
+        Number(due.indexOf(b) >= 0) - Number(due.indexOf(a) >= 0);
+    }).slice(0, len);
     var body = ids.map(function (id) { return exFor(ctx, item(id)); });
     var pairable = Store.knownItems(p).filter(function (id) { var x = item(id); return x.k !== 'z' && (x.em || x.sw); });
     if (pairable.length >= 4) body.push({ type: 'match', items: pairable });
@@ -400,6 +429,7 @@
       U.clear(sheet);
       if (idx >= seq.length) { finish(false); return; }
       var ex = seq[idx++];
+      assisted = false;
       progress();
       U.clear(main);
       main.className = 'ls-main ex-' + ex.type;
@@ -409,6 +439,7 @@
     }
 
     var answered = false;
+    var assisted = false;
     var api = {
       ctx: ctx, main: main, player: player, item: item,
       showPy: function (it, strict) {
@@ -419,6 +450,7 @@
         return strict ? b <= 1 : b <= 2;
       },
       begin: function () { answered = false; },
+      usedHint: function () { assisted = true; },
       /* ok: juist/fout; info: { item, skill, label (wat juist was), noGrade, retryType } */
       answer: function (ok, info) {
         if (answered) return; answered = true;
@@ -439,13 +471,18 @@
           // later in de les nog eens, op een makkelijkere manier
           if (it && !info.noRetry && (ctx.retries[it.id] || 0) < 1) {
             ctx.retries[it.id] = 1;
-            var easy = it.k === 'z' ? 'zb' : (it.em || it.sw ? 'lp' : 'lb');
-            seq.splice(Math.min(seq.length, idx + 3), 0, { type: info.retryType || easy, item: it.id, retry: true });
+            var easy = { H: it.em || it.sw ? 'hp' : 'hb', P: it.em || it.sw ? 'pp' : 'hpy', T: 'tp' }[info.skill];
+            if (it.k === 'z' || !easy) easy = it.k === 'z' ? 'zb' : (it.em || it.sw ? 'lp' : 'lb');
+            seq.splice(Math.min(seq.length, idx + 3), 0, { type: info.retryType || easy, item: it.id, easy: true, retry: true });
             total = seq.length;
           }
         }
         comboEl.textContent = ctx.combo >= 3 ? '🔥' + ctx.combo : '';
-        if (it && !info.noGrade) Store.grade(player, it.id, ok);
+        if (it && !info.noGrade) {
+          Store.grade(player, it.id, ok);
+          Store.gradeAbility(player, it.id, info.skill,
+            info.skillOk !== undefined ? info.skillOk : ok, assisted || info.assisted);
+        }
         Store.countExercise(player, info.skillOk !== undefined ? info.skillOk : ok, info.skill);
         Store.save();
         showSheet(ok, it, info);
@@ -623,33 +660,33 @@
   EX.lh = function (ex, api) {
     var it = item(ex.item);
     var file = au(it, 'any');
-    var showPy = api.showPy(it, true);
+    var showPy = api.showPy(it, true) && !(ex.independent && api.player.set.pinyin === 'fade');
     prompt(api, 'Welk teken hoor je?', h('div.ex-listen', speakerBtn(file, { big: true }), slowBtn(file)));
     var opts = optionsWith(api, it, nOpts(api, it, ex), 'listen');
-    multiple(api, opts.map(function (x) { return { el: hzCard(x, showPy), ok: x.id === it.id }; }), { item: it.id, skill: 'H' });
+    multiple(api, opts.map(function (x) { return { el: hzCard(x, showPy), ok: x.id === it.id }; }), { item: it.id, skill: 'H', assisted: showPy });
     U.wait(250).then(function () { Snd.play(file); });
   };
   /* Teken -> plaatje (lezen) */
   EX.hp = function (ex, api) {
     var it = item(ex.item);
-    var showPy = api.showPy(it, true);
+    var showPy = api.showPy(it, true) && !(ex.independent && api.player.set.pinyin === 'fade');
     var blk = hzBlock(it, showPy, 'xl');
     var peek = null;
     if (!showPy && api.player.set.pinyin !== 'never') {
       peek = h('button.peek', { type: 'button' }, 'pinyin');
-      peek.addEventListener('click', function () { U.$$('rt', blk).forEach(function (r) { r.classList.remove('hide'); }); peek.remove(); });
+      peek.addEventListener('click', function () { api.usedHint(); U.$$('rt', blk).forEach(function (r) { r.classList.remove('hide'); }); peek.remove(); });
     }
     prompt(api, it.syl.length > 1 ? 'Wat betekent dit woord?' : 'Wat betekent dit teken?', h('div.ex-hz', blk, peek));
     var opts = optionsWith(api, it, nOpts(api, it, ex), null, function (x) { return x.em || x.sw; });
-    multiple(api, opts.map(function (x) { return { el: picCard(x), ok: x.id === it.id }; }), { item: it.id, skill: 'H' });
+    multiple(api, opts.map(function (x) { return { el: picCard(x), ok: x.id === it.id }; }), { item: it.id, skill: 'H', assisted: showPy });
   };
   /* Teken -> betekenis (voor woorden zonder duidelijk plaatje) */
   EX.hb = function (ex, api) {
     var it = item(ex.item);
-    var showPy = api.showPy(it, true);
+    var showPy = api.showPy(it, true) && !(ex.independent && api.player.set.pinyin === 'fade');
     prompt(api, 'Wat betekent dit?', h('div.ex-hz', hzBlock(it, showPy, 'xl')));
     var opts = optionsWith(api, it, 3, null);
-    multiple(api, opts.map(function (x) { return { el: h('span.card.nlc', h('span.lbl', x.nl)), ok: x.id === it.id }; }), { item: it.id, skill: 'H' });
+    multiple(api, opts.map(function (x) { return { el: h('span.card.nlc', h('span.lbl', x.nl)), ok: x.id === it.id }; }), { item: it.id, skill: 'H', assisted: showPy });
   };
   /* Pinyin -> plaatje (pinyin lezen) */
   EX.pp = function (ex, api) {
@@ -960,7 +997,7 @@
       check.disabled = true;
       U.$$('.zb-tile').forEach(function (x) { x.disabled = true; });
       line.classList.add(ok ? 'right' : 'wrong');
-      api.answer(ok, { item: it.id, skill: listenOnly ? 'L' : 'H' });
+      api.answer(ok, { item: it.id, skill: listenOnly ? 'L' : 'H', assisted: !listenOnly && showPy });
     });
     api.main.appendChild(check);
     if (listenOnly) U.wait(250).then(function () { Snd.play(file); });

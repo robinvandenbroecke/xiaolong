@@ -80,6 +80,14 @@
     return out;
   }
 
+  function mergeAbilities(a, b) {
+    var result = {};
+    ['L', 'H', 'P', 'T', 'S'].forEach(function (skill) {
+      result[skill] = mergeItems((a || {})[skill], (b || {})[skill]);
+    });
+    return result;
+  }
+
   function mergePlayer(a, b) {
     if (!isObj(a)) return clone(b);
     if (!isObj(b)) return clone(a);
@@ -100,6 +108,8 @@
       fam: union(a.fam, b.fam),
       seen: union(a.seen, b.seen),
       mine: maxTree(a.mine, b.mine),
+      ability: mergeAbilities(a.ability, b.ability),
+      outfit: mergeItems(a.outfit, b.outfit),
       hatch: hatchA && hatchB ? Math.min(hatchA, hatchB) : (hatchA || hatchB)
     };
   }
