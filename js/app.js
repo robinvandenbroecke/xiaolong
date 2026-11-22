@@ -29,7 +29,12 @@
     else if (Store.stage(p) > stageBefore && stageBefore > 0) ev.push('grow');
     if (!goalBefore && Store.dayTotals(p).s >= p.set.goal && !p.hb[U.dayKey()]) ev.push('goal');
     var fw = Store.familyWeek();
-    if (Store.players().length > 1 && fw.lessons >= fw.goal && !p.fam[fw.week]) { p.fam[fw.week] = Date.now(); Store.save(); ev.push('family'); }
+    if (Store.players().length > 1 && fw.lessons >= fw.goal && !p.fam[fw.week]) {
+      p.fam[fw.week] = Date.now();
+      Mine.bonus(p, 'family:' + fw.week, 4);
+      Store.save();
+      ev.push('family');
+    }
     return ev;
   };
 

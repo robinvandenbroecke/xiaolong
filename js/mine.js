@@ -1,4 +1,4 @@
-/* Blokkenmijn: munten, kaarten en een luisterspel. */
+/* Drakenexpeditie: missies, drakenmunten en verzamelingen. */
 (function () {
   'use strict';
   var h = U.h;
@@ -19,7 +19,7 @@
     { id: 'skycape', slot: 'body', name: 'Nachtcape', icon: '🌙', price: 28, mission: 'master' }
   ];
   var missions = [
-    { id: 'bridge', name: 'De oversteek', icon: '🌉', hint: 'Bouw de brug in de Blokkenmijn.', target: 1, reward: 6, route: 'bridge',
+    { id: 'bridge', name: 'De oversteek', icon: '🌉', hint: 'Luister naar zes woorden om de brug te bouwen.', target: 1, reward: 6, route: 'bridge',
       progress: function (p) { return Number(!!data(p).runs.bridge); } },
     { id: 'lessons', name: 'Het lantaarnpad', icon: '🏮', hint: 'Speel drie verschillende lessen op het leerpad.', target: 3, reward: 8, route: 'home',
       progress: function (p) { return Store.allNodes().filter(function (node) { return Store.nodeDone(p, node.lesson.id); }).length; } },
@@ -76,7 +76,7 @@
 
   function data(player) {
     if (!player.mine) player.mine = {};
-    ['earned', 'spent', 'cards', 'practice', 'gear', 'missions', 'runs', 'trailDays', 'discoveries'].forEach(function (key) {
+    ['earned', 'spent', 'cards', 'practice', 'gear', 'missions', 'runs', 'trailDays', 'discoveries', 'bonuses', 'purchases'].forEach(function (key) {
       if (!player.mine[key]) player.mine[key] = {};
     });
     return player.mine;
@@ -96,7 +96,7 @@
       return total + (wallet.missions[mission.id] ? mission.reward : 0);
     }, 0);
     var explorer = discoveries.filter(function (entry) { return !!wallet.discoveries[entry.id]; }).length;
-    return Math.max(0, sum(wallet.earned) + bonus + explorer * 2 - sum(wallet.spent));
+    return Math.max(0, sum(wallet.earned) + bonus + explorer * 2 + sum(wallet.bonuses) - sum(wallet.spent) - sum(wallet.purchases));
   };
 
   function increment(map, amount) {
@@ -106,18 +106,41 @@
 
   Mine.earn = function (player) { increment(data(player).earned, 1); };
 
-  function openPack(player) {
-    if (Mine.balance(player) < price) return null;
+  Mine.bonus = function (player, key, amount) {
+    var bonuses = data(player).bonuses;
+    if (bonuses[key]) return 0;
+    bonuses[key] = amount;
+    return amount;
+  };
+
+  Mine.claimMissions = function (player) {
+    var claimed = data(player).missions;
+    var earned = 0;
+    missions.forEach(function (mission) {
+      if (claimed[mission.id] || mission.progress(player) < mission.target) return;
+      claimed[mission.id] = 1;
+      earned += mission.reward;
+    });
+    if (earned) { Store.save(); App.syncSoon(); }
+    return earned;
+  };
+
+  Mine.recordListening = function (player, itemId) {
+    var card = cards.find(function (entry) { return entry.item === itemId; });
+    if (!card) return;
+    var practice = data(player).practice;
+    if (!practice[card.id]) practice[card.id] = {};
+    practice[card.id][U.dayKey()] = 1;
+  };
+
+  function collectCard(player, card) {
     var wallet = data(player);
-    var unowned = cards.filter(function (card) { return !wallet.cards[card.id]; });
-    var card = U.pick(unowned.length ? unowned : cards);
-    var duplicate = !!wallet.cards[card.id];
-    increment(wallet.spent, price);
-    if (duplicate) increment(wallet.earned, 2);
-    else wallet.cards[card.id] = Date.now();
+    if (wallet.cards[card.id] || Mine.balance(player) < price) return false;
+    wallet.purchases['card:' + card.id] = price;
+    wallet.cards[card.id] = Date.now();
     Store.save();
     App.syncSoon();
-    return { card: card, duplicate: duplicate };
+    return true;
   }
 
   function button(label, click, style) {
@@ -139,22 +162,25 @@
     return canvas;
   }
 
-  function gold(player, card) {
-    return Object.keys(data(player).practice[card.id] || {}).length >= 3;
+  function cardDays(player, card) {
+    return Math.min(3, Object.keys(data(player).practice[card.id] || {}).length);
   }
 
   function reveal(player, card, message) {
     var body = h('div.mine-reveal', h('h2', message), picture(card), h('h3', card.name),
       h('p', h('span.hz', { lang: 'zh-CN' }, card.hz), ' · ', card.py, ' · ', card.word),
       button('🔊 Luister', function () { Snd.play(Snd.nextVoice(CONTENT.items[card.item])); }));
-    if (gold(player, card)) body.appendChild(h('p', '✦ Gouden kaart'));
+    var days = cardDays(player, card);
+    body.appendChild(h('p', days === 3 ? '✦ Gouden kaart' : days + ' van 3 oefendagen voor goud'));
     App.modal(body);
   }
 
-  Mine.label = function (player) {
-    var coins = Mine.balance(player);
-    return coins + ' 🪙 · ' + count(player) + '/6 kaarten' +
-      (coins >= price ? ' · Pakje klaar!' : ' · Nog ' + (price - coins) + ' voor een pakje');
+  Mine.collectionNav = function (view) {
+    return h('nav.row.collection-nav', { 'aria-label': 'Verzameling' }, [['mine', 'Kaarten'], ['album', 'Stickers']].map(function (entry) {
+      var tab = button(entry[1], function () { App.go(entry[0]); }, view === entry[0] ? 'primary' : 'ghost');
+      if (view === entry[0]) tab.setAttribute('aria-current', 'page');
+      return tab;
+    }));
   };
 
   Mine.show = function () {
@@ -162,33 +188,36 @@
     if (!player) { App.go('chooser'); return; }
     var room = h('section.mine-room');
     U.clear(U.$('#app')).appendChild(room);
-    room.appendChild(h('header.sub-top', button('← Terug', function () { App.go('home'); App.syncSoon(); }), h('h2', 'Blokkenmijn')));
+    room.appendChild(h('header.sub-top', button('← Kamp', function () { App.go('adventure'); }), h('h2', 'Verzameling')));
+    room.appendChild(Mine.collectionNav('mine'));
     var balance = Mine.balance(player);
-    room.appendChild(h('p.mine-balance', balance + ' 🪙 · ' + count(player) + ' van 6 kaarten'));
-    room.appendChild(h('p', balance >= price ? 'Je kunt een pakje openen.' : 'Nog ' + (price - balance) + ' munten voor een pakje.'));
-    var pack = button('Open pakje · 6 🪙', function () {
-      var result = openPack(player);
-      if (!result) return;
-      Mine.show();
-      Snd.fx('done');
-      reveal(player, result.card, result.duplicate ? 'Dubbele kaart · 2 munten terug' : 'Nieuwe kaart!');
-    }, 'primary');
-    pack.disabled = balance < price;
-    room.appendChild(h('div.row', pack, button('Bouw de brug', function () { App.go('adventure', { route: 'bridge' }); }), button('Drakengarderobe', function () { App.go('wardrobe'); })));
+    var ownedCount = count(player);
+    room.appendChild(h('p.mine-balance', balance + ' 🪙 · ' + ownedCount + ' van ' + cards.length + ' kaarten'));
+    room.appendChild(h('p', ownedCount === cards.length ? 'Je hebt alle kaarten. Maak ze goud door te oefenen.' :
+      balance >= price ? 'Kies een kaart voor ' + price + ' drakenmunten.' : 'Nog ' + (price - balance) + ' drakenmunten voor je volgende kaart.'));
     var album = h('div.mine-album');
     cards.forEach(function (card) {
       var owned = !!data(player).cards[card.id];
       if (!owned) {
-        album.appendChild(h('div.mine-card.mine-locked', h('span', '?'), h('span', 'Nog te vinden')));
+        album.appendChild(h('button.mine-card', {
+          type: 'button', disabled: balance < price, 'aria-label': 'Verzamel ' + card.name + ' voor ' + price + ' drakenmunten',
+          onclick: function () {
+            if (!collectCard(player, card)) return;
+            Mine.show();
+            Snd.fx('done');
+            reveal(player, card, 'Nieuwe kaart!');
+          }
+        }, picture(card), h('strong', card.name), h('span', price + ' 🪙')));
         return;
       }
-      album.appendChild(h('button.mine-card' + (gold(player, card) ? '.mine-gold' : ''),
+      album.appendChild(h('button.mine-card' + (cardDays(player, card) === 3 ? '.mine-gold' : ''),
         { type: 'button', onclick: function () { reveal(player, card, 'Jouw kaart'); } },
         picture(card), h('strong', card.name), h('span.hz', { lang: 'zh-CN' }, card.hz)));
     });
     room.appendChild(h('h3', 'Mijn kaarten'));
     room.appendChild(album);
-    room.appendChild(h('p.small', 'Een gouden kaart verdien je door het woord op drie verschillende dagen meteen goed te herkennen in het brugspel.'));
+    room.appendChild(h('p.small', 'Maak een kaart goud door het woord op drie verschillende dagen meteen te herkennen in een luisteroefening of in het brugspel.'));
+    room.appendChild(button('Speel het brugspel', function () { App.go('adventure', { route: 'bridge' }); }));
   };
 
   Mine.wardrobe = function () {
@@ -198,9 +227,8 @@
     var balance = Mine.balance(player);
     var room = h('section.mine-room');
     U.clear(U.$('#app')).appendChild(room);
-    room.appendChild(h('header.sub-top', button('← Terug', function () { App.go('home'); App.syncSoon(); }), h('h2', 'Drakengarderobe')));
+    room.appendChild(h('header.sub-top', button('← Kamp', function () { App.go('adventure'); }), h('h2', 'Drakengarderobe')));
     room.appendChild(h('p.mine-balance', balance + ' 🪙'));
-    room.appendChild(button('Naar de missies', function () { App.go('adventure'); }));
     room.appendChild(h('div.wardrobe-dragon', { html: Dragon.forPlayer(player, 'happy', { stage: Math.max(1, Store.stage(player)) }) }));
     if (!player.hatch) room.appendChild(h('p.small', 'Zo ziet je draak eruit zodra hij uit het ei komt.'));
     var filters = [['all', 'Alles'], ['head', 'Hoofd'], ['body', 'Lijf'], ['neck', 'Hals'], ['feet', 'Voeten']];
@@ -223,7 +251,7 @@
       var action = button(label, function () {
         if (!wallet.gear[item.id]) {
           if (locked || Mine.balance(player) < item.price) return;
-          increment(wallet.spent, item.price);
+          wallet.purchases['gear:' + item.id] = item.price;
           wallet.gear[item.id] = Date.now();
         }
         player.outfit = player.outfit || {};
@@ -255,16 +283,44 @@
       play(player, room, opts.route);
       return;
     }
-    room.appendChild(h('header.sub-top', button('← Terug', function () { App.go('home'); App.syncSoon(); }), h('h2', 'Drakenexpeditie')));
+    var earned = Mine.claimMissions(player);
+    if (earned) App.toast('Missie volbracht! +' + earned + ' drakenmunten');
+    room.appendChild(h('header.sub-top', button('← Leerpad', function () { App.go('home'); App.syncSoon(); }), h('h2', 'Expeditiekamp')));
     var claimed = missions.filter(function (mission) { return !!wallet.missions[mission.id]; }).length;
     var rank = claimed === missions.length ? 'Wolkenwachter' : claimed >= 3 ? 'Drakenridder' : 'Ontdekker';
+    var next = missions.find(function (mission) { return !wallet.missions[mission.id]; });
     room.appendChild(h('div.adventure-banner',
       h('div.wardrobe-dragon', { html: Dragon.forPlayer(player, 'happy', { stage: Math.max(1, Store.stage(player)) }) }),
-      h('div', h('strong', rank), h('p', claimed + ' van ' + missions.length + ' missies · ' + Mine.balance(player) + ' 🪙'))));
-    room.appendChild(h('div.row',
-      button('Drakengarderobe', function () { App.go('wardrobe'); }),
-      button('Kaarten & pakjes', function () { App.go('mine'); }),
-      button('🧭 Ontdek China', function () { App.go('china'); })));
+      h('div', h('strong', rank), h('p', claimed + ' van ' + missions.length + ' missies · ' + Mine.balance(player) + ' 🪙'),
+        h('progress', { value: claimed, max: missions.length, 'aria-label': 'Voltooide missies' }))));
+    room.appendChild(h('p', 'Met sterren groeit je draak. Met drakenmunten kies je kaarten en kleren.'));
+    var places = h('div.camp-places');
+    [
+      ['mine', '🃏 Verzameling', count(player) + '/' + cards.length + ' kaarten · ' + Object.keys(player.stickers).length + '/' + CONTENT.stickers.length + ' stickers'],
+      ['wardrobe', '👑 Drakengarderobe', 'Kies kleren voor je draak'],
+      ['china', '🧭 Ontdek China', 'Verhalen en ontdekkingen']
+    ].forEach(function (entry) {
+      places.appendChild(button([h('strong', entry[1]), h('span.small', entry[2])], function () { App.go(entry[0]); }));
+    });
+    room.appendChild(places);
+    if (next) room.appendChild(h('h3', 'Volgende missie'));
+    function missionCard(mission) {
+      var amount = Math.min(mission.target, mission.progress(player));
+      var done = !!wallet.missions[mission.id];
+      var card = h('section.adventure-card', h('h3', mission.icon + ' ' + mission.name), h('p', mission.hint),
+        h('progress', { value: done ? mission.target : amount, max: mission.target, 'aria-label': mission.name }),
+        h('span.small', (done ? '✓ Voltooid' : amount + ' / ' + mission.target) + ' · ' + mission.reward + ' 🪙'));
+      if (!done || mission.route !== 'home') {
+        card.appendChild(button(mission.route === 'home' ? 'Naar het leerpad' : done ? 'Speel opnieuw' : 'Start missie', function () {
+          if (mission.route === 'home') App.go('home');
+          else App.go('adventure', { route: mission.route });
+        }, mission === next ? 'primary' : 'ghost'));
+      }
+      return card;
+    }
+    if (next) room.appendChild(missionCard(next));
+    var list = h('div.adventure-list', missions.filter(function (mission) { return mission !== next; }).map(missionCard));
+    room.appendChild(h('details.box.camp-missions', h('summary', next ? 'Alle andere missies' : 'Alle missies'), list));
     var training = h('details.box', h('summary', 'Beluister de zes woorden'));
     var previews = h('div.adventure-words');
     cards.forEach(function (card) {
@@ -273,32 +329,6 @@
     });
     training.appendChild(previews);
     room.appendChild(training);
-    var list = h('div.adventure-list');
-    missions.forEach(function (mission) {
-      var amount = Math.min(mission.target, mission.progress(player));
-      var done = !!wallet.missions[mission.id];
-      var card = h('section.adventure-card', h('h3', mission.icon + ' ' + mission.name), h('p', mission.hint),
-        h('progress', { value: done ? mission.target : amount, max: mission.target, 'aria-label': mission.name }),
-        h('span.small', done ? '✓ Voltooid' : amount + ' / ' + mission.target));
-      if (!done && amount >= mission.target) {
-        card.appendChild(button('Pak ' + mission.reward + ' 🪙', function () {
-          if (wallet.missions[mission.id] || mission.progress(player) < mission.target) return;
-          wallet.missions[mission.id] = 1;
-          Store.save();
-          App.syncSoon();
-          Snd.fx('done');
-          App.toast('+' + mission.reward + ' munten');
-          Mine.adventure();
-        }, 'primary'));
-      } else if (!done || mission.route !== 'home') {
-        card.appendChild(button(mission.route === 'home' ? 'Naar het leerpad' : done ? 'Speel opnieuw' : 'Start missie', function () {
-          if (mission.route === 'home') App.go('home');
-          else App.go('adventure', { route: mission.route });
-        }));
-      }
-      list.appendChild(card);
-    });
-    room.appendChild(list);
   };
 
   Mine.china = function () {
@@ -307,7 +337,7 @@
     var found = data(player).discoveries;
     var room = h('section.mine-room.adventure-room');
     U.clear(U.$('#app')).appendChild(room);
-    room.appendChild(h('header.sub-top', button('← Missies', function () { App.go('adventure'); App.syncSoon(); }), h('h2', 'Ontdek China')));
+    room.appendChild(h('header.sub-top', button('← Kamp', function () { App.go('adventure'); App.syncSoon(); }), h('h2', 'Ontdek China')));
     var progress = h('p.mine-balance', { role: 'status' });
     function report() {
       var n = discoveries.filter(function (entry) { return !!found[entry.id]; }).length;
@@ -362,17 +392,18 @@
     var order = U.shuffle(cards);
     var index = 0;
     var earned = 0;
+    var missionCoins = 0;
 
     function round() {
       U.clear(room);
-      room.appendChild(h('header.sub-top', button('← Missies', function () { App.go('adventure'); App.syncSoon(); }), h('h2', route.title)));
+      room.appendChild(h('header.sub-top', button('← Kamp', function () { App.go('adventure'); App.syncSoon(); }), h('h2', route.title)));
       var bridge = h('div.mine-bridge.route-' + route.className, { 'aria-label': index + ' van 6 opdrachten klaar' });
       for (var i = 0; i < order.length; i++) bridge.appendChild(h('span' + (i < index ? '.laid' : ''), ''));
       room.appendChild(bridge);
       if (index >= order.length) {
         room.appendChild(h('h3', id === 'bridge' ? 'Je bent aan de overkant!' : id === 'gate' ? 'De poort is open!' : 'Je staat boven op de toren!'));
-        room.appendChild(h('p', '+' + earned + ' munten · ' + Mine.balance(player) + ' gespaard'));
-        room.appendChild(button('Naar de missies', function () { App.go('adventure'); }, 'primary'));
+        room.appendChild(h('p', '+' + earned + ' drakenmunten' + (missionCoins ? ' · +' + missionCoins + ' voor missies' : '')));
+        room.appendChild(button('Naar het kamp', function () { App.go('adventure'); }, 'primary'));
         App.syncSoon();
         return;
       }
@@ -400,12 +431,11 @@
           Mine.earn(player);
           earned += 1;
           data(player).trailDays[U.dayKey()] = 1;
-          if (!mistake && id === 'bridge') {
-            var practice = data(player).practice;
-            if (!practice[card.id]) practice[card.id] = {};
-            practice[card.id][U.dayKey()] = 1;
+          if (!mistake && id === 'bridge') Mine.recordListening(player, card.item);
+          if (index + 1 === order.length) {
+            data(player).runs[id] = 1;
+            missionCoins = Mine.claimMissions(player);
           }
-          if (index + 1 === order.length) data(player).runs[id] = 1;
           Store.save();
           Snd.fx('good');
           feedback.textContent = '+1 munt · ' + card.hz + ' ' + card.py;

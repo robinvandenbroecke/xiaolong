@@ -137,8 +137,7 @@
     var who = h('button.chip.who-chip', { type: 'button' },
       h('span.chip-dragon', { html: Dragon.forPlayer(p, 'normal', { crop: 'head' }) }), h('span', p.prof.name), h('span.chev', '▾'));
     who.addEventListener('click', function () { Snd.fx('tap'); App.go('chooser'); });
-    var stars = h('span.chip.stat', h('span.star-ic', '★'), String(Store.totalStars(p)));
-    var streak = h('span.chip.stat', '🏮 ', String(Store.streak(p)));
+    var stars = h('span.chip.stat', { 'aria-label': Store.totalStars(p) + ' groeisterren' }, h('span.star-ic', '★'), String(Store.totalStars(p)));
     var sync = null;
     if (Sync.configured()) {
       sync = h('button.chip.sync-ic', { type: 'button', 'aria-label': 'Synchroniseren', id: 'syncIcon' }, Sync.icon());
@@ -146,7 +145,7 @@
     }
     var gear = h('button.chip.gear', { type: 'button', 'aria-label': 'Ouderhoek' }, '⚙');
     gear.addEventListener('click', function () { App.parentGate().then(function (ok) { if (ok) App.go('parent'); }); });
-    home.appendChild(h('header.topbar', who, h('div.top-stats', stars, streak, sync, gear)));
+    home.appendChild(h('header.topbar', who, h('div.top-stats', stars, sync, gear)));
 
     // Startscherm: de volgende les staat bovenaan.
     var side = h('section.side');
@@ -206,18 +205,11 @@
     var tones = h('button.act', { type: 'button', disabled: !Store.nodeDone(p, 'u1a') },
       h('span.act-ic', '🎵'), h('span.act-t', 'Toonspel'), h('span.act-s', 'de vier tonen'));
     tones.addEventListener('click', function () { Snd.unlock(); App.startLesson({ kind: 'toonspel' }); });
-    var nOwned = Object.keys(p.stickers).length;
-    var album = h('button.act', { type: 'button' }, h('span.act-ic', '📒'), h('span.act-t', 'Album'), h('span.act-s', nOwned + ' / ' + CONTENT.stickers.length + ' stickers'));
-    album.addEventListener('click', function () { App.go('album'); });
-    acts.appendChild(practice); acts.appendChild(tones); acts.appendChild(album);
+    acts.appendChild(practice); acts.appendChild(tones);
     side.appendChild(acts);
     var rewards = h('div.home-rewards');
     rewards.appendChild(h('button.mine-entry.adventure-entry', { type: 'button', onclick: function () { App.go('adventure'); } },
-      h('strong', '🐉 Drakenexpeditie'), h('span', 'Missies en beloningen')));
-    rewards.appendChild(h('button.mine-entry', { type: 'button', onclick: function () { App.go('mine'); } },
-      h('strong', '⛏ Blokkenmijn'), h('span', Mine.label(p))));
-    rewards.appendChild(h('button.mine-entry', { type: 'button', onclick: function () { App.go('wardrobe'); } },
-      h('strong', '👑 Drakengarderobe'), h('span', Mine.balance(p) + ' 🪙')));
+      h('strong', '🐉 Expeditiekamp'), h('span', Mine.balance(p) + ' 🪙 · Missies en schatten')));
     side.appendChild(rewards);
 
     // samen-doel
@@ -353,6 +345,7 @@
   /* ---------- resultaat ---------- */
   Scr.results = function (res, events) {
     var p = Store.current();
+    var missionCoins = Mine.claimMissions(p);
     var root = app();
     var wrap = h('div.results');
     var acc = res.total ? Math.round(100 * res.ok / res.total) : 100;
@@ -366,7 +359,8 @@
       h('div', h('strong', '+' + res.stars), h('span', 'sterren')),
       h('div', h('strong', res.total ? acc + '%' : '—'), h('span', res.retryNode !== undefined ? 'eerste poging' : 'juist')),
       h('div', h('strong', Math.max(1, Math.round(res.secs / 60))), h('span', 'minuten'))));
-    if (res.coins) wrap.appendChild(h('p.mine-reward', '+' + res.coins + ' 🪙 · ' + Mine.label(p)));
+    if (res.coins) wrap.appendChild(h('p.mine-reward', '+' + res.coins + ' drakenmunten · ' + Mine.balance(p) + ' 🪙 in je buidel'));
+    if (missionCoins) wrap.appendChild(h('p.mine-reward', 'Missie volbracht! +' + missionCoins + ' 🪙'));
     if (res.repairs) wrap.appendChild(h('p.mine-reward', res.repairs === 1 ? '↺ Eén antwoord lukte bij de tweede kans.' : '↺ ' + res.repairs + ' antwoorden lukten bij de tweede kans.'));
     if (res.retained) wrap.appendChild(h('p.mine-reward', res.retained === 1 ? 'Eén woord lukte op twee verschillende dagen.' : res.retained + ' woorden lukten op twee verschillende dagen.'));
     if (res.needsPractice) wrap.appendChild(h('p', 'Nog een kort oefenrondje voor de volgende les.'));
@@ -388,12 +382,10 @@
     go.addEventListener('click', function () { if (res.needsPractice) destination = 'retry'; nextEvent(); });
     wrap.appendChild(go);
     if (res.needsPractice) wrap.appendChild(h('button.btn.ghost', { type: 'button', onclick: nextEvent }, 'Naar mijn draak'));
-    if (Mine.balance(p) >= 6) {
-      wrap.appendChild(h('button.btn.ghost', { type: 'button', onclick: function () {
-        destination = 'mine';
-        nextEvent();
-      } }, '⛏ Pakje openen in de Blokkenmijn'));
-    }
+    wrap.appendChild(h('button.btn.ghost', { type: 'button', onclick: function () {
+      destination = 'adventure';
+      nextEvent();
+    } }, 'Naar het expeditiekamp'));
     root.appendChild(wrap);
     Snd.fx('done');
     var queue = (events || []).slice();
@@ -478,7 +470,7 @@
     for (var i = 0; i < 7; i++) row.appendChild(h('span.fam-l.on', { html: lanternSVG('done') }));
     wrap.appendChild(row);
     wrap.appendChild(h('h2', 'Samen gehaald!'));
-    wrap.appendChild(h('p', 'Jullie hebben deze week samen genoeg lessen gespeeld. Alle lantaarns branden!'));
+    wrap.appendChild(h('p', 'Jullie hebben deze week samen genoeg lessen gespeeld. Je verdient 4 drakenmunten.'));
     var go = h('button.btn.primary.big', { type: 'button' }, '太棒了！');
     go.addEventListener('click', done);
     wrap.appendChild(go);
@@ -501,22 +493,25 @@
     root.appendChild(wrap);
     var opened = false;
     env.addEventListener('click', function () {
-      if (opened) return; opened = true;
+      var today = U.dayKey();
+      if (opened || p.hb[today] || Store.dayTotals(p, today).s < p.set.goal) return;
+      opened = true;
       env.classList.add('open');
       Snd.fx('hongbao');
-      var today = U.dayKey();
       p.hb[today] = Date.now();
+      var coins = Mine.bonus(p, 'envelope:' + today, 3);
       var free = CONTENT.stickers.filter(function (s) { return !p.stickers[s.id]; });
       var st = free.length ? U.pick(free) : null;
       if (st) p.stickers[st.id] = Date.now();
-      else Store.addStars(p, 10);
       Store.save();
+      App.syncSoon();
       setTimeout(function () {
         App.confetti();
         env.remove(); note.remove();
-        title.textContent = st ? 'Een nieuwe sticker!' : 'Je hebt alle stickers! Je krijgt 10 sterren.';
+        title.textContent = st ? 'Een nieuwe sticker!' : 'Je stickeralbum is compleet!';
         if (st) wrap.insertBefore(stickerCard(st, true), title);
-        var go = h('button.btn.primary.big', { type: 'button' }, 'Naar mijn album');
+        if (coins) wrap.appendChild(h('p.mine-reward', '+' + coins + ' drakenmunten'));
+        var go = h('button.btn.primary.big', { type: 'button' }, 'Naar mijn stickers');
         go.addEventListener('click', function () { if (opts.then) opts.then(); else App.go('album'); });
         if (opts.then) go.textContent = 'Verder';
         wrap.appendChild(go);
@@ -544,10 +539,11 @@
     var p = Store.current();
     var root = app();
     var wrap = h('div.album');
-    var back = h('button.btn.ghost.back', { type: 'button' }, '← Terug');
-    back.addEventListener('click', function () { App.go('home'); });
-    wrap.appendChild(h('header.sub-top', back, h('h2', 'Mijn album'), h('span.al-n', Object.keys(p.stickers).length + ' / ' + CONTENT.stickers.length)));
-    wrap.appendChild(h('p.lead', 'Haal je dagdoel, dan krijg je een rood envelopje met een sticker.'));
+    var back = h('button.btn.ghost.back', { type: 'button' }, '← Kamp');
+    back.addEventListener('click', function () { App.go('adventure'); });
+    wrap.appendChild(h('header.sub-top', back, h('h2', 'Verzameling'), h('span.al-n', Object.keys(p.stickers).length + ' / ' + CONTENT.stickers.length)));
+    wrap.appendChild(Mine.collectionNav('album'));
+    wrap.appendChild(h('p.lead', 'Open je rode envelopje na je dagdoel voor een sticker en 3 drakenmunten.'));
     [['dier', 'De twaalf dieren van de Chinese kalender'], ['china', 'Dingen uit China']].forEach(function (cat) {
       wrap.appendChild(h('h3', cat[1]));
       var grid = h('div.al-grid');
@@ -650,7 +646,7 @@
             if (answered) return; answered = true;
             b.classList.add(x.ok ? 'right' : 'wrong');
             if (!x.ok) U.$$('.choice', g).forEach(function (bb, k) { if (opts[k].ok) bb.classList.add('right'); });
-            if (x.ok) { okCount++; Snd.fx('good'); Store.addStars(p, 2); } else Snd.fx('oops');
+            if (x.ok) { okCount++; Snd.fx('good'); Store.addStars(p, 2); Mine.earn(p); } else Snd.fx('oops');
             Store.countExercise(p, x.ok, 'L');
             Store.save();
             var nx = h('button.btn.primary', { type: 'button' }, 'Verder');
@@ -672,7 +668,7 @@
           ok: okCount, total: st.qs.length, stars: okCount * 2 + 3, secs: Math.round(secs) });
         Store.save();
         App.syncSoon();
-        Scr.results({ stars: okCount * 2 + 3, ok: okCount, total: st.qs.length, lanterns: lanterns, secs: secs, newItems: [] },
+        Scr.results({ stars: okCount * 2 + 3, coins: okCount, ok: okCount, total: st.qs.length, lanterns: lanterns, secs: secs, newItems: [] },
           App.eventsAfter(p, stageBefore, goalBefore));
       }
     }

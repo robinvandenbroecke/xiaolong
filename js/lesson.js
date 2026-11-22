@@ -502,6 +502,7 @@
           if (!info.almost && ctx.combo > 0 && ctx.combo % 5 === 0) { add += 2; Snd.fx('combo'); } else Snd.fx('good');
           ctx.stars += add; Store.addStars(player, add);
           if (!info.almost) { Mine.earn(player); ctx.coins = (ctx.coins || 0) + 1; }
+          if (it && info.skill === 'L' && !active.retry && !assisted && !info.assisted) Mine.recordListening(player, it.id);
           starEl.textContent = ctx.stars;
           starEl.classList.remove('bump'); void starEl.offsetWidth; starEl.classList.add('bump');
         } else {
