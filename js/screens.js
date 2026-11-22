@@ -267,6 +267,8 @@
       nearby.appendChild(h('li', row));
     });
     if (nearby.children.length) section.appendChild(nearby);
+    section.appendChild(h('button.btn.ghost', { type: 'button', onclick: function () { App.go('growth', { quick: true }); } },
+      'Probeer een gesprek'));
     return section;
   }
 

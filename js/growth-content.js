@@ -98,3 +98,33 @@ window.GROWTH_CONTENT = [
       model: '我们发现，午饭以后有很多一次性杯子。可以让同学们带杯子，也可以借杯子。如果有人忘记还，就在出口放一个归还箱。我们先试一个星期，再比较用了多少杯子。你有什么建议？' }
   ] }
 ];
+
+/* Situatie, hint, zinsdelen, pinyin en andere geldige korte reacties. */
+window.GROWTH_OPENINGS = {
+  'groei-a1-klas': ['Een nieuw kind zwaait. Zeg hallo en vraag zijn naam.', 'Begin met nǐ hǎo. Míngzi betekent naam.',
+    ['你好', '，', '你叫', '什么名字', '？'], 'Nǐ hǎo, nǐ jiào shénme míngzi?', ['你叫什么名字', '你叫什么', 'nǐ jiào shénme míngzi', 'nǐ jiào shénme']],
+  'groei-a1-snack': ['Je staat aan de kraam en hebt dorst. Vraag om een beker water.', 'Yì bēi shuǐ betekent een beker water.',
+    ['请给我', '一杯', '水', '。'], 'Qǐng gěi wǒ yì bēi shuǐ.', ['我要一杯水', '请给我一杯水谢谢', '我要一杯水谢谢']],
+  'groei-a1-park': ['Je wilt vandaag met een vriend in het park spelen. Doe een voorstel.', 'Gōngyuán betekent park. Met ba stel je iets voor.',
+    ['我们', '去公园', '玩吧', '！'], 'Wǒmen qù gōngyuán wán ba!', ['去公园玩吧', '我们去公园吧']],
+  'groei-a1-weg': ['Je vindt de bibliotheek niet. Spreek iemand aan en vraag waar ze is.', 'Túshūguǎn betekent bibliotheek. Nǎr betekent waar.',
+    ['请问', '，', '图书馆', '在哪儿', '？'], 'Qǐngwèn, túshūguǎn zài nǎr?', ['图书馆在哪儿', '图书馆在哪里', '请问图书馆在哪里']],
+  'groei-a2-tas': ['Iemand brengt een blauwe tas. Vraag of er een rood kledingstuk in zit.', 'Bāo lǐ betekent in de tas. Hóngsè de yīfu betekent rood kledingstuk.',
+    ['包里有', '一件', '红色的衣服', '吗', '？'], 'Bāo lǐ yǒu yí jiàn hóngsè de yīfu ma?', ['包里有红色的衣服吗', '里面有红色的衣服吗']],
+  'groei-a2-bouwen': ['Je bouwmaatje heeft geen hout. Vraag of er stenen zijn voor de brug.', 'Shítou betekent steen. Maak van nǐ yǒu een vraag met ma.',
+    ['你有', '石头', '吗', '？'], 'Nǐ yǒu shítou ma?', ['有石头吗', '我们有石头吗', '你有没有石头']],
+  'groei-a2-regen': ['Buiten fietsen lukt niet door de regen. Stel voor om in de sporthal te spelen.', 'Met bùrú doe je een alternatief voorstel. Tǐyùguǎn betekent sporthal.',
+    ['不如', '去体育馆', '打球吧', '。'], 'Bùrú qù tǐyùguǎn dǎqiú ba.', ['我们去体育馆打球吧', '去体育馆打球吧']],
+  'groei-a2-trein': ['De trein heeft vertraging. Vraag of je huidige ticket nog geldig is.', 'Zhè zhāng piào betekent dit ticket. Hái néng yòng betekent nog kunnen gebruiken.',
+    ['请问', '，', '这张票', '还能用吗', '？'], 'Qǐngwèn, zhè zhāng piào hái néng yòng ma?', ['这张票还能用吗', '我的票还能用吗']],
+  'groei-b1-ploeg': ['Een ploegmaat zegt dat winnen het belangrijkste is. Zeg dat je ook wilt dat iedereen een kans krijgt.', 'Wǒ yě xīwàng betekent ik hoop ook. Jīhuì betekent kans.',
+    ['我也希望', '每个人', '都有机会', '。'], 'Wǒ yě xīwàng měi ge rén dōu yǒu jīhuì.', ['我希望每个人都有机会', '我希望大家都有机会']],
+  'groei-b1-filmpje': ['Een vriend kiest de kortste tutorial. Zeg dat de tweede video duidelijker uitlegt.', 'Dì èr ge betekent de tweede. Jiěshì de gèng qīngchu betekent legt duidelijker uit.',
+    ['第二个视频', '解释得', '更清楚', '。'], 'Dì èr ge shìpín jiěshì de gèng qīngchu.', ['第二个解释得更清楚', '第二个视频解释得比较清楚']],
+  'groei-b1-museum': ['Je papieren brug was steviger dan verwacht. Zeg dat je het experiment thuis opnieuw wilt doen.', 'Zài zuò yí cì betekent nog eens doen. Shíyàn betekent experiment.',
+    ['回家以后', '，', '我想把这个实验', '再做一次', '。'], 'Huí jiā yǐhòu, wǒ xiǎng bǎ zhège shíyàn zài zuò yí cì.', ['我想在家再做一次这个实验', '我想再做一次这个实验']],
+  'groei-b1-uitstap': ['Het regent in de voormiddag. Stel voor om eerst naar het pandaverblijf te gaan.', 'Xiān betekent eerst. Xióngmāoguǎn betekent pandaverblijf.',
+    ['我们', '先去', '熊猫馆吧', '。'], 'Wǒmen xiān qù xióngmāoguǎn ba.', ['我们先去熊猫馆', '先去熊猫馆吧']],
+  'groei-b1-project': ['Je klas wil minder bekers weggooien. Stel voor om het plan één week te proberen.', 'Shì betekent proberen. Yí ge xīngqī betekent één week.',
+    ['我们可以', '先试', '一个星期', '。'], 'Wǒmen kěyǐ xiān shì yí ge xīngqī.', ['我们先试一个星期', '我们可以试一个星期']]
+};

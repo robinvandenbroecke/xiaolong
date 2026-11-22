@@ -747,7 +747,8 @@ details.adventure-card > :not(summary) { margin-block: .55rem; }
 .growth-answers .growth-correct { border-color: var(--jade); background: var(--jade-soft); opacity: 1; }
 .growth-chinese { font-family: var(--f-hz); font-size: clamp(1.16rem, 3.8vw, 1.6rem); line-height: 1.7; overflow-wrap: anywhere; }
 .growth-writing { display: grid; gap: .35rem; }
-.growth-writing textarea { width: 100%; padding: .6rem; resize: vertical; color: var(--ink); background: var(--paper); border: 2px solid var(--line); border-radius: .5rem; }
+.growth-writing textarea, .growth-writing input { width: 100%; padding: .6rem; color: var(--ink); background: var(--paper); border: 2px solid var(--line); border-radius: .5rem; }
+.growth-writing textarea { resize: vertical; }
 .growth-speak { display: flex; align-items: center; gap: .4rem; min-height: 44px; }
 .china-answers { display: grid; gap: .4rem; }
 .china-answers .btn { text-align: left; min-height: 44px; }

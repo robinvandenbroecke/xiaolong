@@ -57,8 +57,93 @@
     return h('button.btn.' + (style || 'ghost'), { type: 'button', onclick: click }, text);
   }
 
+  function normalizeReply(text) {
+    return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z\u3400-\u9fff]/g, '');
+  }
+
+  function openConversation(card, lesson, player, next) {
+    var opening = GROWTH_OPENINGS[lesson.id];
+    var model = opening[2].join('');
+    var accepted = [model, opening[3]].concat(opening[4]).map(normalizeReply);
+    var field = h('input.growth-chinese', { type: 'text', lang: 'zh-CN', maxlength: 120, autocomplete: 'off',
+      autocapitalize: 'off', placeholder: 'Chinees of pinyin' });
+    var feedback = h('p.growth-feedback', { role: 'status' });
+    var submit = h('button.btn.primary', { type: 'submit' }, 'Stuur mijn antwoord');
+    var done = false;
+    function check(replies) {
+      if (done || !card.isConnected) return;
+      if (!replies.some(function (reply) { return accepted.indexOf(normalizeReply(reply)) >= 0; })) {
+        feedback.textContent = 'Ik herken die reactie nog niet. Pas je antwoord aan of probeer de hint.';
+        return;
+      }
+      done = true;
+      submit.disabled = true;
+      field.disabled = true;
+      feedback.textContent = '✓ Je gesprek kan verder.';
+      card.appendChild(button('Verder', next, 'primary'));
+    }
+    card.appendChild(h('h3', 'Jij mag beginnen'));
+    card.appendChild(h('p', opening[0]));
+    card.appendChild(h('form.growth-writing', { onsubmit: function (event) {
+      event.preventDefault();
+      if (field.value.trim()) check([field.value]);
+      else feedback.textContent = 'Typ iets of gebruik de hint.';
+    } }, h('label.growth-writing', 'Jouw reactie', field), submit));
+    if (player.set.speak && navigator.onLine !== false && Voice.hasASR()) {
+      var mic = button('🎙 Spreek in · online', function () {
+        if (done || mic.disabled) return;
+        mic.disabled = true;
+        feedback.textContent = 'Ik luister…';
+        Voice.listen().then(function (replies) {
+          if (!card.isConnected || done) return;
+          if (replies.length) { field.value = replies[0]; check(replies); }
+          else feedback.textContent = 'Ik heb niets kunnen verstaan. Je kunt ook typen of de zinsdelen gebruiken.';
+        }).catch(function () {
+          if (card.isConnected && !done) feedback.textContent = 'Inspreken lukt nu niet. Je kunt typen of de zinsdelen gebruiken.';
+        }).then(function () { mic.disabled = false; });
+      });
+      card.appendChild(mic);
+    }
+    card.appendChild(feedback);
+    var parts = opening[2].filter(function (part) { return normalizeReply(part); });
+    var selected = [];
+    var draft = h('p.growth-chinese', { lang: 'zh-CN', 'aria-live': 'polite' }, '…');
+    var tiles = U.shuffle(parts).map(function (part) {
+      var tile = button(h('span', { lang: 'zh-CN' }, part), function () {
+        if (done || tile.disabled) return;
+        selected.push(part);
+        draft.textContent = selected.join('');
+        tile.disabled = true;
+      });
+      return tile;
+    });
+    // Elke knop kan maar één keer aan de zin worden toegevoegd.
+    var hint = h('details.box', h('summary', 'Hint of zinsdelen'), h('p', opening[1]), draft, h('div.row', tiles),
+      h('div.row', button('Controleer mijn zin', function () { check([selected.join('')]); }), button('Wis mijn zin', function () {
+        selected = [];
+        draft.textContent = '…';
+        tiles.forEach(function (tile) { tile.disabled = false; });
+      })), h('details.box', h('summary', 'Bekijk een voorbeeld'),
+        h('p.growth-chinese', { lang: 'zh-CN' }, model), h('p', opening[3])));
+    card.appendChild(hint);
+  }
+
   Growth.show = function (opts) {
     var player = Store.current();
+    if (player && opts && opts.quick) {
+      var quick = h('main.growth', h('header.sub-top', button('← Leerpad', function () { App.go('home'); }), h('h2', 'Probeer een gesprek')));
+      var quickCard = h('section.card.growth-task');
+      quick.appendChild(quickCard);
+      U.clear(U.$('#app')).appendChild(quick);
+      openConversation(quickCard, lessons['groei-a1-klas'], player, function () {
+        U.clear(quickCard);
+        quickCard.appendChild(h('p.growth-chinese', { lang: 'zh-CN' }, '我叫小明。'));
+        quickCard.appendChild(h('p', 'Het andere kind antwoordt dat het Xiaoming heet.'));
+        quickCard.appendChild(button('Naar het leerpad', function () { App.go('home'); }, 'primary'));
+      });
+      return;
+    }
     var node = opts && opts.lesson;
     var lesson = node && lessons[node.id];
     if (!player || !lesson || (!Store.nodeOpen(player, node.id) && !Store.nodeDone(player, node.id))) {
@@ -72,7 +157,7 @@
     U.clear(U.$('#app')).appendChild(root);
     root.appendChild(h('header.sub-top', button('← Leerpad', function () { App.go('home'); }), h('h2', lesson.title)));
     root.appendChild(h('p.small', node.level + ' · ' + lesson.aim));
-    var progress = h('progress', { max: 4, value: 0, 'aria-label': 'Stappen in deze missie' });
+    var progress = h('progress', { max: 5, value: 0, 'aria-label': 'Stappen in deze missie' });
     var card = h('section.card.growth-task');
     root.appendChild(progress);
     root.appendChild(card);
@@ -89,7 +174,7 @@
     function question() {
       Snd.stop();
       U.clear(card);
-      progress.value = step;
+      progress.value = step + 1;
       var current = step;
       var task = lesson.questions[current];
       var response = h('p.growth-feedback', { role: 'status' });
@@ -136,7 +221,7 @@
     function produce() {
       Snd.stop();
       U.clear(card);
-      progress.value = 3;
+      progress.value = 4;
       card.appendChild(h('h3', 'Nu jij'));
       card.appendChild(h('p', lesson.tasks[band]));
       if (node.level === 'B1' && band > 0) card.appendChild(h('details.box', h('summary', 'Oefen met iemand'),
@@ -183,7 +268,7 @@
       function showResult() {
         U.clear(U.$('#app')).appendChild(root);
         U.clear(card);
-        progress.value = 4;
+        progress.value = 5;
         card.appendChild(h('h3', passed ? 'Missie klaar!' : 'Probeer deze missie opnieuw'));
         card.appendChild(h('p', score + ' van 3 vragen juist · +' + stars + ' ★ · +' + score + ' 🪙'));
         if (missionCoins) card.appendChild(h('p.mine-reward', '+' + missionCoins + ' 🪙 voor een expeditiebeloning'));
@@ -194,7 +279,7 @@
       }
     }
 
-    question();
+    openConversation(card, lesson, player, question);
   };
 
   window.Growth = Growth;
