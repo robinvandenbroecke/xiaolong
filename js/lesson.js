@@ -14,7 +14,7 @@
   function item(id) { return CONTENT.items[id]; }
   function au(it, which) {
     if (!it || !it.au || !it.au.length) return null;
-    if (which === 'any') return U.pick(it.au);
+    if (which === 'any') return Snd.nextVoice(it);
     return it.au[0];
   }
   function singleSyl(it) { return it.syl.length === 1; }
@@ -607,7 +607,19 @@
     var more = h('div.intro-more.later');
     if (it.k !== 'z' && (it.em || it.sw)) more.appendChild(picture(it, true));
     more.appendChild(h('p.intro-nl', it.nl));
-    var tools = h('div.intro-tools', speakerBtn(au(it), { big: true }), slowBtn(au(it)));
+    var voices = Snd.voices(it);
+    var voice = 0;
+    var selected = function () { return voices[voice]; };
+    var listen = speakerBtn(selected, { big: true });
+    var tools = h('div.intro-tools', listen, slowBtn(selected));
+    if (voices.length > 1) {
+      var another = h('button.btn.ghost.small', { type: 'button' }, 'Andere stem');
+      another.addEventListener('click', function () {
+        voice = (voice + 1) % voices.length;
+        listen.click();
+      });
+      tools.appendChild(another);
+    }
     card.appendChild(tools);
     card.appendChild(more);
     if (it.tk) card.appendChild(h('div.tk.later', h('span.tk-ic', '💡'), h('span', it.tk)));
@@ -932,7 +944,7 @@
       el.dataset.id = it.id; el.dataset.side = side;
       el.addEventListener('click', function () {
         if (el.classList.contains('done')) return;
-        if (side === 'l') Snd.play(au(it)); else Snd.fx('tap');
+        if (side === 'l') Snd.play(au(it, 'any')); else Snd.fx('tap');
         if (!sel || sel.dataset.side === side) {
           if (sel) sel.classList.remove('sel');
           sel = el; el.classList.add('sel'); return;

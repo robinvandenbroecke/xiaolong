@@ -14,7 +14,7 @@
     { id: 'cape', slot: 'body', name: 'Rode heldencape', icon: '🦸', price: 16 },
     { id: 'lantern', slot: 'neck', name: 'Lantaarnhanger', icon: '🏮', price: 14, mission: 'lessons' },
     { id: 'armor', slot: 'body', name: 'Jadeharnas', icon: '🛡', price: 18, mission: 'gate' },
-    { id: 'cloudboots', slot: 'feet', name: 'Wolkenlaarzen', icon: '☁️', price: 18, mission: 'days' },
+    { id: 'cloudboots', slot: 'feet', name: 'Wolkenlaarzen', price: 18, mission: 'days' },
     { id: 'starcrown', slot: 'head', name: 'Sterrenkroon', icon: '🌟', price: 24, mission: 'tower' },
     { id: 'skycape', slot: 'body', name: 'Nachtcape', icon: '🌙', price: 28, mission: 'master' }
   ];
@@ -236,7 +236,10 @@
       if (locked) action.textContent = item.price + ' 🪙 na missie';
       else if (!owned && action.disabled) action.textContent = 'Nog ' + (item.price - balance) + ' 🪙 sparen';
       action.setAttribute('aria-label', item.name + ' · ' + action.textContent);
-      list.appendChild(h('div.mine-card', h('span.wardrobe-icon', { 'aria-hidden': 'true' }, item.icon),
+      var icon = item.id === 'cloudboots'
+        ? h('span.wardrobe-icon', { 'aria-hidden': 'true', html: Dragon.cloudBootsIcon() })
+        : h('span.wardrobe-icon', { 'aria-hidden': 'true' }, item.icon);
+      list.appendChild(h('div.mine-card', icon,
         h('strong', item.name), mission ? h('span', 'Missie: ' + mission.name) : null, action));
     });
     room.appendChild(list);

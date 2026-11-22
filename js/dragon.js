@@ -49,13 +49,13 @@
       s.push('<path d="M67,140 L82,132 H118 L133,140 L125,175 L100,189 L75,175 Z" fill="#48a179" stroke="#23233F" stroke-width="3"/><path d="M100,142 L113,156 L100,174 L87,156 Z" fill="#c3f9ce" stroke="#246653" stroke-width="3"/>');
     }
     // voeten
-    if (body) [82, 118].forEach(function (x) {
+    if (body && outfit.feet === 'cloudboots') s.push(cloudBoots());
+    else if (body) [82, 118].forEach(function (x) {
       s.push('<ellipse cx="' + x + '" cy="199" rx="15" ry="8" fill="' + dark + '" stroke="' + INK + '" stroke-width="3"/>');
       s.push('<path d="M' + (x - 6) + ',203 v-4 M' + x + ',204 v-4 M' + (x + 6) + ',203 v-4" stroke="' + belly + '" stroke-width="2" stroke-linecap="round"/>');
-    });
-    if (body && (outfit.feet === 'boots' || outfit.feet === 'cloudboots')) [82, 118].forEach(function (x) {
-      var boot = outfit.feet === 'boots' ? '#d92538' : '#dbe9ff';
-      s.push('<path d="M' + (x - 9) + ',187 h18 v8 q9,1 8,10 h-34 q-1,-8 8,-10 Z" fill="' + boot + '" stroke="#23233F" stroke-width="3"/>');
+      if (outfit.feet === 'boots') {
+        s.push('<path d="M' + (x - 9) + ',187 h18 v8 q9,1 8,10 h-34 q-1,-8 8,-10 Z" fill="#d92538" stroke="#23233F" stroke-width="3"/>');
+      }
     });
     // armen
     if (!body) { /* alleen het hoofd */ } else if (mood === 'cheer') {
@@ -122,6 +122,15 @@
     return s.join('');
   }
 
+  function cloudBoots() {
+    var shoe = '<path d="M-9,4 L-5,0 H10 Q14,0 14,5 L16,20 H-22 V18 Q-22,13 -16,12 L-11,10 Z" fill="#446fa4" stroke="' + INK + '" stroke-width="2.5"/>' +
+      '<path d="M-22,19 H16 V23 L13,25 H-19 Q-22,25 -22,22 Z" fill="#f5faff" stroke="' + INK + '" stroke-width="2.5"/>' +
+      '<path d="M-20,17 Q-19,13 -11,13 L-7,17 Z" fill="#bbdcf4"/>' +
+      '<path d="M-7,6 H0 M-9,10 H-2" stroke="#fff" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M4,15 Q3,12 6,12 Q7,9 10,12 Q14,12 12,15 Z" fill="#d6eaff"/>';
+    return '<g transform="translate(81 182)">' + shoe + '</g><g transform="translate(119 182) scale(-1 1)">' + shoe + '</g>';
+  }
+
   function outlined(d, color, w) {
     return '<path d="' + d + '" stroke="' + INK + '" stroke-width="' + (w + 6) + '" fill="none" stroke-linecap="round"/>' +
       '<path d="' + d + '" stroke="' + color + '" stroke-width="' + w + '" fill="none" stroke-linecap="round"/>';
@@ -185,6 +194,9 @@
 
   window.Dragon = {
     svg: dragonSVG,
+    cloudBootsIcon: function () {
+      return '<svg viewBox="56 174 88 42" width="58" height="30" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' + cloudBoots() + '</svg>';
+    },
     forPlayer: function (p, mood, extra) {
       var o = { color: Store.colorOf(p), stage: Store.stage(p), mood: mood || 'normal' };
       o.outfit = {};

@@ -7,6 +7,39 @@
   var enabled = true;
   var current = null;
   var cache = {};
+  var storyVoices = null;
+  var nextVoice = {};
+
+  function pronunciationKey(it) {
+    return it.syl.map(function (s) { return s.c + ':' + s.m; }).join(' ');
+  }
+
+  Snd.voices = function (it) {
+    if (!it || !it.au || !it.au.length) return [];
+    if (!storyVoices) {
+      storyVoices = {};
+      Object.keys(CONTENT.stories).forEach(function (id) {
+        CONTENT.stories[id].lines.forEach(function (line) {
+          var file = line.au[0];
+          // Een vervangende standaardopname telt niet als stem van het personage.
+          if (!file || line.who === 'all' || !file.endsWith('-' + line.who + '.mp3')) return;
+          var key = pronunciationKey(line);
+          if (!storyVoices[key]) storyVoices[key] = {};
+          if (!storyVoices[key][line.who]) storyVoices[key][line.who] = file;
+        });
+      });
+    }
+    var voices = storyVoices[pronunciationKey(it)] || {};
+    return it.au.concat(Object.keys(voices).map(function (who) { return voices[who]; }));
+  };
+
+  Snd.nextVoice = function (it) {
+    var files = Snd.voices(it);
+    if (!files.length) return null;
+    var i = nextVoice[it.id] || 0;
+    nextVoice[it.id] = (i + 1) % files.length;
+    return files[i];
+  };
 
   function ac() {
     if (!ctx) {

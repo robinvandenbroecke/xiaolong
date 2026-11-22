@@ -320,7 +320,7 @@
       l.new.forEach(function (id) {
         var it = item(id);
         var c = h('button.ns-chip', { type: 'button' }, h('span.hz', { lang: 'zh-CN' }, it.hz), h('span.lbl', it.nl));
-        if (Store.introduced(p, id)) c.addEventListener('click', function () { Snd.play(it.au[0]); });
+        if (Store.introduced(p, id)) c.addEventListener('click', function () { Snd.play(Snd.nextVoice(it)); });
         else c.classList.add('new');
         chips.appendChild(c);
       });
@@ -368,7 +368,7 @@
       res.newItems.forEach(function (id) {
         var it = item(id);
         var c = h('button.ns-chip', { type: 'button' }, h('span.hz', { lang: 'zh-CN' }, it.hz), h('span.lbl', it.py));
-        c.addEventListener('click', function () { Snd.play(it.au[0]); });
+        c.addEventListener('click', function () { Snd.play(Snd.nextVoice(it)); });
         chips.appendChild(c);
       });
       nw.appendChild(chips);
