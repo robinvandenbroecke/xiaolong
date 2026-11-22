@@ -613,6 +613,10 @@ html.eink .title .hz { color: #000; }
 .camp-missions summary { cursor: pointer; min-height: 44px; align-content: center; }
 .camp-missions[open] summary { margin-bottom: .65rem; }
 .collection-nav { justify-content: center; flex-wrap: wrap; margin-block: .75rem; }
+.collection-sets .btn { flex: 1 1 9rem; white-space: normal; padding-inline: .5rem; }
+.series-trophy { align-items: center; text-align: center; }
+.series-trophy.mine-gold { border-color: #8f5705; background: #ffdfa0; }
+html.eink .series-trophy.mine-gold { border-style: double; border-width: 4px; }
 .adventure-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); gap: .7rem; }
 .adventure-card { display: flex; flex-direction: column; align-items: flex-start; gap: .45rem; padding: .9rem; text-align: left; background: #fffdf4; border: 2px solid #58638a; border-radius: .8rem; }
 .adventure-card p { margin: 0; }
